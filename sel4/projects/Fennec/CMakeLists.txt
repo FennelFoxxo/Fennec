@@ -24,17 +24,16 @@ sel4_libs_import_libraries()
 
 # Name the executable and list source files required to build it
 add_executable(Fennec
-	src/main.cpp
-	src/globals/globals.cpp
-	src/memory/allocator/setup.cpp
-	src/memory/allocator/thread.cpp
-	src/memory/mapper/setup.cpp
-	src/memory/mapper/thread.cpp
+	src/rootserver.cpp
+	src/setup/setup.cpp
+	src/setup/memory.cpp
+	src/setup/memalloc.cpp
+	src/threads/memalloc.cpp
 )
 
 target_include_directories(Fennec PRIVATE src)
 
-target_compile_options(Fennec PRIVATE -O0)
+target_compile_options(Fennec PRIVATE -O0 -g -fno-inline-small-functions)
 
 # List of libraries to link with the application.
 #target_link_libraries(Fennec muslc sel4muslcsys)

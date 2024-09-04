@@ -1,44 +1,41 @@
 #pragma once
 
-#include <sel4/simple_types.h>
+#include "macros.h"
 
-#define GLOBALS_MAX_USABLE_MEMORY_REGIONS 100
-#define GLOBALS_LARGE_CHUNK_BITS 20
-#define GLOBALS_SMALL_CHUNK_BITS 12
-#define GLOBALS_MIN_LARGE_CHUNKS 10
-
-#define GLOBALS_MIN_EMPTY_SLOTS 10
-
-#define GLOBALS_LARGE_CHUNK_SIZE BIT(GLOBALS_LARGE_CHUNK_BITS)
-#define GLOBALS_SMALL_CHUNK_SIZE BIT(GLOBALS_SMALL_CHUNK_BITS)
-
-#define GLOBALS_MEMORY_ALLOCATOR_PRIORITY 250
-#define GLOBALS_MEMORY_MAPPER_PRIORITY 250
+extern "C" {
+#include <sel4/sel4.h>
+#include <sel4platsupport/bootinfo.h>
+}
 
 namespace Globals {
 
+struct Globals {
+
 // Initializes global variables
-bool initialize();
-extern bool is_initialized;
+bool setup();
 
-// CSlots
-extern seL4_Word num_empty_slots;
-extern seL4_CPtr bootstrap_memory; // LARGE_CHUNK_SIZE-sized block of memory for initial bootstrapping tasks
-extern seL4_CPtr memory_allocator_tcb;
-extern seL4_CPtr memory_mapper_tcb;
-	
-struct UsableMemoryRegion {
-	seL4_Word paddr;
-	seL4_Word size;
-	seL4_CPtr cptr;
+// Boot info permanent pointer
+seL4_BootInfo* boot_info = nullptr;
+
+// CSlots, initialized by setup_cptrs() - actual allocations are done by various allocate functions
+seL4_Word num_empty_slots = 0;
+
+
+seL4_Word num_memory_chunks = 0; // Total number of usable memory chunks
+
+// Some chunks of memory are needed to spin up initial threads - this is the index to the first free chunk after those, that can be dynamically allocated to other threads
+seL4_Word memory_chunks_allocable_start = 0;
+
+seL4_CPtr L2_memory_slot = 0;
+seL4_CPtr bootstrap_memory_slot = 0; // LARGE_CHUNK_SIZE-sized block of memory for initial bootstrapping tasks
+
+// Memory allocator
+
+seL4_CPtr memory_allocator_tcb_slot = 0;
+seL4_CPtr memory_allocator_croot_slot = 0;
+
+char memory_allocator_stack[1024] __attribute__((aligned(16)));
+
 };
-
-// List of usable memory regions, excluding the chunk used for bootstrap memory
-extern UsableMemoryRegion usable_memory_regions[GLOBALS_MAX_USABLE_MEMORY_REGIONS];
-extern seL4_Word usable_memory_regions_count;
-extern seL4_Word large_chunks_count;
-
-extern char memory_allocator_stack[1024] __attribute__((aligned(8)));
-extern char memory_mapper_stack[1024] __attribute__((aligned(8)));
 
 }

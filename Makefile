@@ -16,13 +16,9 @@ SEL4_PROJECT_SRC_D = $(SEL4_D)/projects/Fennec/src/
 #SEL4_PROJECT_FILES = $(wildcard $(SEL4_PROJECT_SRC_D)/*.*)
 SEL4_PROJECT_FILES = $(shell find $(SEL4_PROJECT_SRC_D) -name "*.*")
 
-.PHONY: all clean test
+.PHONY: all clean
 
 all: | $(BUILD_D)/disk.img
-
-test:
-	echo $(SEL4_PROJECT_FILES)
-
 
 # Make final image
 $(BUILD_D)/disk.img: $(TEMP_D)/esp.img
