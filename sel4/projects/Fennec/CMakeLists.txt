@@ -38,9 +38,8 @@ target_compile_options(Fennec PRIVATE -O0 -g -fno-inline-small-functions)
 # List of libraries to link with the application.
 #target_link_libraries(Fennec muslc sel4muslcsys)
 target_link_libraries(Fennec
-    sel4runtime sel4
-    muslc utils
-    sel4muslcsys sel4platsupport sel4utils sel4debug)
+sel4runtime utils sel4muslcsys
+)
 
 # Tell the build system that this application is the root task. 
 include(rootserver)

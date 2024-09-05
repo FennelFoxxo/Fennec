@@ -1,3 +1,4 @@
+
 #include "globals/globals.h"
 #include "setup/setup.h"
 #include "threads/memalloc.h"
@@ -18,6 +19,8 @@ int main(void)
 	
 
 	printf("\n\n--- ROOTSERVER START ---\n\n");
+	
+	seL4_GetIPCBuffer();
 
 	Globals::Globals g;
 	
@@ -27,9 +30,12 @@ int main(void)
 	if (MemAlloc::start(g)) printf("Thread started successfully\n");
 	else halt("Failed to start thread");
 	
+	printf("Thing: %p\n", __sel4_ipc_buffer);
+	
 	seL4_DebugDumpScheduler();
 
 	halt();
     return 0;
-	
+
+while (1);
 }

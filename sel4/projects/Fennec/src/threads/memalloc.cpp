@@ -1,9 +1,6 @@
 #include "memalloc.h"
 #include "globals/macros.h"
 
-
-#define _Static_assert static_assert
-
 extern "C" {
 #include <stdio.h>
 #include <sel4/sel4.h>
@@ -22,7 +19,10 @@ namespace MemAlloc {
 
 	void thread(void* arg) {
 		
-		printf("Thread started successfully!\n");
+		printf("Thread started successfully @ %p!\n", &thread);
+		
+		printf("Reading IPC buffer address from TLS: %p\n", seL4_GetIPCBuffer());
+		
 		printf("Attempting to suspend thread...\n");
 		seL4_TCB_Suspend(calcRootCSlotAddress(MEM_ALLOC_SLOT_CNODE));
 		printf("This should not print!!\n");

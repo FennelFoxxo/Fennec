@@ -13,25 +13,27 @@
 //#define GLOBALS_CNODE_BITS (GLOBALS_SMALL_CHUNK_BITS - seL4_SlotBits)
 #define GLOBALS_CNODE_BITS 12
 
-
-
-
 // --- MEMALLOC CONSTANTS ---
 
 // CSlot locations
 #define MEM_ALLOC_SLOT_CNODE 1 // Index of cspace root
 #define MEM_ALLOC_SLOT_L2_MEM_CNODE 2 // CSlot that points to L2 memory chunk CNode, which contains all system memory broken into 1MB chunks
-//#define MEM_ALLOC_SLOT_IPC_BUFFER 3 // CSlot that points to IPC buffer
+#define MEM_ALLOC_SLOT_IPC_BUFFER 3 // CSlot that points to IPC buffer
 #define MEM_ALLOC_PRIORITY 250
 
 
+// --- MEMORY LAYOUT ---
 
-
-#define TEMP_IPC_ADDR 0x7000000
+// Addresses for where to place various objects needed during bootstrapping process
+#define BOOTSTRAP_VADDR 0x40000000 // 1GB
+#define MEM_ALLOC_IPC_BUFFER_VADDR (BOOTSTRAP_VADDR + 0x0000)
+#define MEM_ALLOC_TLS_VADDR (MEM_ALLOC_IPC_BUFFER_VADDR + 0x1000)
 
 // Useful macros
 
 #define GLOBALS_LARGE_CHUNK_SIZE BIT(GLOBALS_LARGE_CHUNK_BITS)
 #define GLOBALS_SMALL_CHUNK_SIZE BIT(GLOBALS_SMALL_CHUNK_BITS)
+
+#define _Static_assert static_assert // Needed for sel4runtime to compile
 
 #define retFalseIfFail(f) if (!(f)) return false

@@ -18,10 +18,14 @@ bool setCptrs(Globals::Globals& globals) {
 	if (globals.num_empty_slots < GLOBALS_MIN_EMPTY_SLOTS) return false; // Not enough empty cslots to satisfy requirements
 	
 	seL4_CPtr empty_ptr = globals.boot_info->empty.start;
-	globals.bootstrap_memory_slot			= empty_ptr++;
-	globals.L2_memory_slot					= empty_ptr++;
-	globals.memory_allocator_tcb_slot		= empty_ptr++;
-	globals.memory_allocator_croot_slot		= empty_ptr++;
+	globals.bootstrap_memory_slot				= empty_ptr++;
+	globals.L2_memory_slot						= empty_ptr++;
+	globals.page_directory_slot					= empty_ptr++;
+	globals.page_table_slot						= empty_ptr++;
+	globals.memory_allocator_tcb_slot			= empty_ptr++;
+	globals.memory_allocator_croot_slot			= empty_ptr++;
+	globals.memory_allocator_ipc_buffer_slot	= empty_ptr++;
+	globals.memory_allocator_tls_slot			= empty_ptr++;
 	
 	return true;
 }

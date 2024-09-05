@@ -19,7 +19,9 @@ static Globals::Globals* globals_ptr;
 seL4_Word calcL2Index() { return globals_ptr->num_memory_chunks / BIT(GLOBALS_CNODE_BITS); }
 seL4_Word calcL1Index() { return globals_ptr->num_memory_chunks % BIT(GLOBALS_CNODE_BITS); }
 seL4_UntypedDesc* getRegionDesc(seL4_CPtr untyped_ptr) { return &globals_ptr->boot_info->untypedList[untyped_ptr - globals_ptr->boot_info->untyped.start]; }
-bool isAcceptableRegion(seL4_UntypedDesc* desc) { return !desc->isDevice && desc->sizeBits >= GLOBALS_LARGE_CHUNK_BITS && desc->paddr > 0xD00000; } // Only non-device memory at least LARGE_CHUNK in size
+
+// Only non-device memory at least LARGE_CHUNK in size - make sure to only use memory above where grub might place modules
+bool isAcceptableRegion(seL4_UntypedDesc* desc) { return !desc->isDevice && desc->sizeBits >= GLOBALS_LARGE_CHUNK_BITS && desc->paddr > 0xF00000; }
 
 // Calculate how many total and usable chunks we have, before doing any retyping
 void precalcChunkCount() {
@@ -117,10 +119,32 @@ bool reserveBootstrapMemory() {
 	return error == seL4_NoError;
 }
 
+bool allocatePagingStructures() {
+	seL4_Error error = seL4_Untyped_Retype(globals_ptr->bootstrap_memory_slot, seL4_X86_PageDirectoryObject, 0, seL4_CapInitThreadCNode, 0, 0, globals_ptr->page_directory_slot, 1);
+	retFalseIfFail(error == seL4_NoError);
+	
+	error = seL4_Untyped_Retype(globals_ptr->bootstrap_memory_slot, seL4_X86_PageTableObject, 0, seL4_CapInitThreadCNode, 0, 0, globals_ptr->page_table_slot, 1);
+	retFalseIfFail(error == seL4_NoError);
+	
+	return true;
+}
+
+bool setupPagingStructures() {
+	seL4_Error error = seL4_X86_PageDirectory_Map(globals_ptr->page_directory_slot, seL4_CapInitThreadVSpace, BOOTSTRAP_VADDR, seL4_X86_Default_VMAttributes);
+	retFalseIfFail(error == seL4_NoError);
+	
+	error = seL4_X86_PageTable_Map(globals_ptr->page_table_slot, seL4_CapInitThreadVSpace, BOOTSTRAP_VADDR, seL4_X86_Default_VMAttributes);
+	retFalseIfFail(error == seL4_NoError);
+	
+	return true;
+}
+
 bool Setup::setupMemory(Globals::Globals& globals) {
 	globals_ptr = &globals;
 	retFalseIfFail( breakRegionsIntoChunks() );
 	retFalseIfFail( reserveBootstrapMemory() );
+	retFalseIfFail( allocatePagingStructures() );
+	retFalseIfFail( setupPagingStructures() );
 	
 	return true;
 }
