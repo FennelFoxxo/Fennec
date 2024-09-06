@@ -22,12 +22,11 @@ int main(void)
 	
 	seL4_GetIPCBuffer();
 
-	Globals::Globals g;
-	
-	if (Setup::setup(g)) printf("Globals setup successfully\n");
+
+	if (Setup::setup()) printf("Globals setup successfully\n");
 	else halt("Failed to setup globals");
 	
-	if (MemAlloc::start(g)) printf("Thread started successfully\n");
+	if (MemAlloc::start()) printf("Thread started successfully\n");
 	else halt("Failed to start thread");
 	
 	printf("Thing: %p\n", __sel4_ipc_buffer);

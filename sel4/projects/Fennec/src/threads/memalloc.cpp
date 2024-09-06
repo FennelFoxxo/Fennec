@@ -10,8 +10,8 @@ extern "C" {
 
 namespace MemAlloc {
 	
-	bool start(Globals::Globals& globals) {
-		seL4_Error error = seL4_TCB_Resume(globals.memory_allocator_tcb_slot);
+	bool start() {
+		seL4_Error error = seL4_TCB_Resume(Globals::memory_allocator_tcb_slot);
 		if (error != seL4_NoError) return false;
 
 		return true;

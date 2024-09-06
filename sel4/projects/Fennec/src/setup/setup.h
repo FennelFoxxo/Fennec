@@ -4,6 +4,6 @@
 
 namespace Setup {
 
-bool setup(Globals::Globals& globals);
+bool setup();
 
 }

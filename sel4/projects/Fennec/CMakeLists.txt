@@ -25,6 +25,7 @@ sel4_libs_import_libraries()
 # Name the executable and list source files required to build it
 add_executable(Fennec
 	src/rootserver.cpp
+	src/globals/globals.cpp
 	src/setup/setup.cpp
 	src/setup/memory.cpp
 	src/setup/memalloc.cpp

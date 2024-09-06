@@ -12,20 +12,16 @@ static bool must_allocate_new_L1;
 static seL4_Word precalc_total_memory_chunks_count;
 static seL4_Word precalc_usable_memory_chunks_count; // Total memory chunks minus chunks used for L2 and L1 tables
 
-// Globals are used everywhere in here and it's annoying to pass them to every function, so this is set in setupMemory and used as a shorthand in all the other functions
-static Globals::Globals* globals_ptr; 
-
-
-seL4_Word calcL2Index() { return globals_ptr->num_memory_chunks / BIT(GLOBALS_CNODE_BITS); }
-seL4_Word calcL1Index() { return globals_ptr->num_memory_chunks % BIT(GLOBALS_CNODE_BITS); }
-seL4_UntypedDesc* getRegionDesc(seL4_CPtr untyped_ptr) { return &globals_ptr->boot_info->untypedList[untyped_ptr - globals_ptr->boot_info->untyped.start]; }
+seL4_Word calcL2Index() { return Globals::num_memory_chunks / BIT(GLOBALS_CNODE_BITS); }
+seL4_Word calcL1Index() { return Globals::num_memory_chunks % BIT(GLOBALS_CNODE_BITS); }
+seL4_UntypedDesc* getRegionDesc(seL4_CPtr untyped_ptr) { return &Globals::boot_info->untypedList[untyped_ptr - Globals::boot_info->untyped.start]; }
 
 // Only non-device memory at least LARGE_CHUNK in size - make sure to only use memory above where grub might place modules
 bool isAcceptableRegion(seL4_UntypedDesc* desc) { return !desc->isDevice && desc->sizeBits >= GLOBALS_LARGE_CHUNK_BITS && desc->paddr > 0xF00000; }
 
 // Calculate how many total and usable chunks we have, before doing any retyping
 void precalcChunkCount() {
-	for (seL4_CPtr slot = globals_ptr->boot_info->untyped.start; slot != globals_ptr->boot_info->untyped.end; slot++) { // Iterate over list of untypeds provided by bootinfo
+	for (seL4_CPtr slot = Globals::boot_info->untyped.start; slot != Globals::boot_info->untyped.end; slot++) { // Iterate over list of untypeds provided by bootinfo
 		seL4_UntypedDesc* desc = getRegionDesc(slot);
 		if (isAcceptableRegion(desc)) precalc_total_memory_chunks_count += BIT(desc->sizeBits - GLOBALS_LARGE_CHUNK_BITS);
 	}
@@ -37,17 +33,17 @@ void precalcChunkCount() {
 
 
 bool allocateL2CNode(seL4_CPtr region_to_use) {
-	seL4_Error error = seL4_Untyped_Retype(region_to_use, seL4_CapTableObject, GLOBALS_CNODE_BITS, seL4_CapInitThreadCNode, 0, 0, globals_ptr->L2_memory_slot, 1);
+	seL4_Error error = seL4_Untyped_Retype(region_to_use, seL4_CapTableObject, GLOBALS_CNODE_BITS, seL4_CapInitThreadCNode, 0, 0, Globals::L2_memory_slot, 1);
 	return error == seL4_NoError;
 }
 
 bool allocateL1Cnode(seL4_CPtr region_to_use) {
-	seL4_Error error = seL4_Untyped_Retype(region_to_use, seL4_CapTableObject, GLOBALS_CNODE_BITS, seL4_CapInitThreadCNode, globals_ptr->L2_memory_slot, seL4_WordBits, calcL2Index(), 1);
+	seL4_Error error = seL4_Untyped_Retype(region_to_use, seL4_CapTableObject, GLOBALS_CNODE_BITS, seL4_CapInitThreadCNode, Globals::L2_memory_slot, seL4_WordBits, calcL2Index(), 1);
 	return error == seL4_NoError;
 }
 
 bool allocateLargeChunk(seL4_CPtr region_to_use) {
-	seL4_Error error = seL4_Untyped_Retype(region_to_use, seL4_UntypedObject, GLOBALS_LARGE_CHUNK_BITS, globals_ptr->L2_memory_slot, calcL2Index(), GLOBALS_CNODE_BITS, calcL1Index(), 1);
+	seL4_Error error = seL4_Untyped_Retype(region_to_use, seL4_UntypedObject, GLOBALS_LARGE_CHUNK_BITS, Globals::L2_memory_slot, calcL2Index(), GLOBALS_CNODE_BITS, calcL1Index(), 1);
 	return error == seL4_NoError;
 }
 
@@ -74,13 +70,13 @@ bool breakRegionIntoChunks(seL4_CPtr untyped_ptr) {
 			continue;
 		}
 		
-		if (globals_ptr->num_memory_chunks % 100 == 0) {
-			printf("  Mapped %lu memory chunks out of %lu...\n", globals_ptr->num_memory_chunks, precalc_usable_memory_chunks_count);
+		if (Globals::num_memory_chunks % 100 == 0) {
+			printf("  Mapped %lu memory chunks out of %lu...\n", Globals::num_memory_chunks, precalc_usable_memory_chunks_count);
 		}
 
 		// Allocate 1MB chunk from untyped memory
 		retFalseIfFail(allocateLargeChunk(untyped_ptr));
-		globals_ptr->num_memory_chunks++;
+		Globals::num_memory_chunks++;
 		
 		// If L1 index has overflowed back to the start, we'll need to allocate a new L1 CNode
 		if (calcL1Index() == 0) {
@@ -99,48 +95,47 @@ bool breakRegionsIntoChunks() {
 	must_allocate_new_L2 = true;
 	must_allocate_new_L1 = true;
 	
-	for (seL4_CPtr slot = globals_ptr->boot_info->untyped.start; slot != globals_ptr->boot_info->untyped.end; slot++) { // Iterate over list of untypeds provided by bootinfo
+	for (seL4_CPtr slot = Globals::boot_info->untyped.start; slot != Globals::boot_info->untyped.end; slot++) { // Iterate over list of untypeds provided by bootinfo
 		seL4_UntypedDesc* desc = getRegionDesc(slot);
 		if (isAcceptableRegion(desc)) {
 			retFalseIfFail(	breakRegionIntoChunks(slot)	);
 		}
 	}
-	retFalseIfFail( precalc_usable_memory_chunks_count == globals_ptr->num_memory_chunks ); // Something must have gone horribly wrong!
+	retFalseIfFail( precalc_usable_memory_chunks_count == Globals::num_memory_chunks ); // Something must have gone horribly wrong!
 	
-	printf("Mapped all %lu memory chunks\n", globals_ptr->num_memory_chunks);
+	printf("Mapped all %lu memory chunks\n", Globals::num_memory_chunks);
 	
 	return true;
 }
 
 bool reserveBootstrapMemory() {
-	seL4_Error error = seL4_CNode_Copy(	seL4_CapInitThreadCNode, globals_ptr->bootstrap_memory_slot, seL4_WordBits,		// Destination
-										globals_ptr->L2_memory_slot, 0, GLOBALS_CNODE_BITS * 2, seL4_AllRights);		// Source
-	globals_ptr->memory_chunks_allocable_start++;
+	seL4_Error error = seL4_CNode_Copy(	seL4_CapInitThreadCNode, Globals::bootstrap_memory_slot, seL4_WordBits,		// Destination
+										Globals::L2_memory_slot, 0, GLOBALS_CNODE_BITS * 2, seL4_AllRights);		// Source
+	Globals::memory_chunks_allocable_start++;
 	return error == seL4_NoError;
 }
 
 bool allocatePagingStructures() {
-	seL4_Error error = seL4_Untyped_Retype(globals_ptr->bootstrap_memory_slot, seL4_X86_PageDirectoryObject, 0, seL4_CapInitThreadCNode, 0, 0, globals_ptr->page_directory_slot, 1);
+	seL4_Error error = seL4_Untyped_Retype(Globals::bootstrap_memory_slot, seL4_X86_PageDirectoryObject, 0, seL4_CapInitThreadCNode, 0, 0, Globals::page_directory_slot, 1);
 	retFalseIfFail(error == seL4_NoError);
 	
-	error = seL4_Untyped_Retype(globals_ptr->bootstrap_memory_slot, seL4_X86_PageTableObject, 0, seL4_CapInitThreadCNode, 0, 0, globals_ptr->page_table_slot, 1);
+	error = seL4_Untyped_Retype(Globals::bootstrap_memory_slot, seL4_X86_PageTableObject, 0, seL4_CapInitThreadCNode, 0, 0, Globals::page_table_slot, 1);
 	retFalseIfFail(error == seL4_NoError);
 	
 	return true;
 }
 
 bool setupPagingStructures() {
-	seL4_Error error = seL4_X86_PageDirectory_Map(globals_ptr->page_directory_slot, seL4_CapInitThreadVSpace, BOOTSTRAP_VADDR, seL4_X86_Default_VMAttributes);
+	seL4_Error error = seL4_X86_PageDirectory_Map(Globals::page_directory_slot, seL4_CapInitThreadVSpace, BOOTSTRAP_VADDR, seL4_X86_Default_VMAttributes);
 	retFalseIfFail(error == seL4_NoError);
 	
-	error = seL4_X86_PageTable_Map(globals_ptr->page_table_slot, seL4_CapInitThreadVSpace, BOOTSTRAP_VADDR, seL4_X86_Default_VMAttributes);
+	error = seL4_X86_PageTable_Map(Globals::page_table_slot, seL4_CapInitThreadVSpace, BOOTSTRAP_VADDR, seL4_X86_Default_VMAttributes);
 	retFalseIfFail(error == seL4_NoError);
 	
 	return true;
 }
 
-bool Setup::setupMemory(Globals::Globals& globals) {
-	globals_ptr = &globals;
+bool Setup::setupMemory() {
 	retFalseIfFail( breakRegionsIntoChunks() );
 	retFalseIfFail( reserveBootstrapMemory() );
 	retFalseIfFail( allocatePagingStructures() );

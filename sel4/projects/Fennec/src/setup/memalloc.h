@@ -4,6 +4,6 @@
 
 namespace Setup {
 	
-bool setupMemAllocThread(Globals::Globals& globals);
+bool setupMemAllocThread();
 	
 }
