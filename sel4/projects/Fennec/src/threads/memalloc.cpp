@@ -17,14 +17,14 @@ namespace MemAlloc {
 		return true;
 	}
 
-	void thread(void* arg) {
+	void thread(seL4_Word arg) {
 		
-		printf("Thread started successfully @ %p!\n", &thread);
-		
-		printf("Reading IPC buffer address from TLS: %p\n", seL4_GetIPCBuffer());
+		printf("Thread started successfully!\n");
 		
 		printf("Attempting to suspend thread...\n");
-		seL4_TCB_Suspend(calcRootCSlotAddress(MEM_ALLOC_SLOT_CNODE));
+		seL4_TCB_Suspend(calcRootCSlotAddress(THREAD_TCB_SLOT));
+		seL4_TCB_Suspend(THREAD_TCB_SLOT);
+		
 		printf("This should not print!!\n");
 	}
 }

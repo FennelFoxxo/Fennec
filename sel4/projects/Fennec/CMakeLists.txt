@@ -28,7 +28,7 @@ add_executable(Fennec
 	src/globals/globals.cpp
 	src/setup/setup.cpp
 	src/setup/memory.cpp
-	src/setup/memalloc.cpp
+	src/threads/thread.cpp
 	src/threads/memalloc.cpp
 )
 

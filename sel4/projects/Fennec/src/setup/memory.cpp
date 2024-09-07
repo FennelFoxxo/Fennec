@@ -34,17 +34,20 @@ void precalcChunkCount() {
 
 bool allocateL2CNode(seL4_CPtr region_to_use) {
 	seL4_Error error = seL4_Untyped_Retype(region_to_use, seL4_CapTableObject, GLOBALS_CNODE_BITS, seL4_CapInitThreadCNode, 0, 0, Globals::L2_memory_slot, 1);
-	return error == seL4_NoError;
+	retErrorIfFail(error == seL4_NoError, "Failed to allocate L2 CNode during memory setup");
+	return true;
 }
 
 bool allocateL1Cnode(seL4_CPtr region_to_use) {
 	seL4_Error error = seL4_Untyped_Retype(region_to_use, seL4_CapTableObject, GLOBALS_CNODE_BITS, seL4_CapInitThreadCNode, Globals::L2_memory_slot, seL4_WordBits, calcL2Index(), 1);
-	return error == seL4_NoError;
+	retErrorIfFail(error == seL4_NoError, "Failed to allocate L1 CNode during memory setup");
+	return true;
 }
 
 bool allocateLargeChunk(seL4_CPtr region_to_use) {
 	seL4_Error error = seL4_Untyped_Retype(region_to_use, seL4_UntypedObject, GLOBALS_LARGE_CHUNK_BITS, Globals::L2_memory_slot, calcL2Index(), GLOBALS_CNODE_BITS, calcL1Index(), 1);
-	return error == seL4_NoError;
+	retErrorIfFail(error == seL4_NoError, "Failed to allocate chunk during memory setup");
+	return true;
 }
 
 // Break a specific region into large chunks
@@ -91,7 +94,7 @@ bool breakRegionIntoChunks(seL4_CPtr untyped_ptr) {
 // Breaks every region into LARGE_CHUNK-sized chunks
 bool breakRegionsIntoChunks() {
 	precalcChunkCount();
-	retFalseIfFail(	precalc_total_memory_chunks_count >= GLOBALS_MIN_LARGE_CHUNKS	); // Exit if not enough chunks
+	retErrorIfFail(precalc_total_memory_chunks_count >= GLOBALS_MIN_LARGE_CHUNKS, "Not enough chunks"); // Exit if not enough chunks
 	must_allocate_new_L2 = true;
 	must_allocate_new_L1 = true;
 	
@@ -101,7 +104,7 @@ bool breakRegionsIntoChunks() {
 			retFalseIfFail(	breakRegionIntoChunks(slot)	);
 		}
 	}
-	retFalseIfFail( precalc_usable_memory_chunks_count == Globals::num_memory_chunks ); // Something must have gone horribly wrong!
+	retErrorIfFail(precalc_usable_memory_chunks_count == Globals::num_memory_chunks, "Failed to map as many chunks as expected"); // Something must have gone horribly wrong!
 	
 	printf("Mapped all %lu memory chunks\n", Globals::num_memory_chunks);
 	
@@ -111,26 +114,27 @@ bool breakRegionsIntoChunks() {
 bool reserveBootstrapMemory() {
 	seL4_Error error = seL4_CNode_Copy(	seL4_CapInitThreadCNode, Globals::bootstrap_memory_slot, seL4_WordBits,		// Destination
 										Globals::L2_memory_slot, 0, GLOBALS_CNODE_BITS * 2, seL4_AllRights);		// Source
+	retErrorIfFail(error == seL4_NoError, "Failed to reserve bootstrap memory");
 	Globals::memory_chunks_allocable_start++;
-	return error == seL4_NoError;
+	return true;
 }
 
 bool allocatePagingStructures() {
 	seL4_Error error = seL4_Untyped_Retype(Globals::bootstrap_memory_slot, seL4_X86_PageDirectoryObject, 0, seL4_CapInitThreadCNode, 0, 0, Globals::page_directory_slot, 1);
-	retFalseIfFail(error == seL4_NoError);
+	retErrorIfFail(error == seL4_NoError, "Failed to retype into x86 page directory object");
 	
 	error = seL4_Untyped_Retype(Globals::bootstrap_memory_slot, seL4_X86_PageTableObject, 0, seL4_CapInitThreadCNode, 0, 0, Globals::page_table_slot, 1);
-	retFalseIfFail(error == seL4_NoError);
+	retErrorIfFail(error == seL4_NoError, "Failed to retype into x86 page table object");
 	
 	return true;
 }
 
 bool setupPagingStructures() {
 	seL4_Error error = seL4_X86_PageDirectory_Map(Globals::page_directory_slot, seL4_CapInitThreadVSpace, BOOTSTRAP_VADDR, seL4_X86_Default_VMAttributes);
-	retFalseIfFail(error == seL4_NoError);
+	retErrorIfFail(error == seL4_NoError, "Failed to map x86 page directory");
 	
 	error = seL4_X86_PageTable_Map(Globals::page_table_slot, seL4_CapInitThreadVSpace, BOOTSTRAP_VADDR, seL4_X86_Default_VMAttributes);
-	retFalseIfFail(error == seL4_NoError);
+	retErrorIfFail(error == seL4_NoError, "Failed to map x86 page table");
 	
 	return true;
 }

@@ -5,5 +5,5 @@
 namespace MemAlloc {
 	bool start();
 	
-	void thread(void* arg);
+	void thread(seL4_Word arg);
 }

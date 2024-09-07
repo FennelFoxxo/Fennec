@@ -12,6 +12,9 @@ namespace Globals {
 // Boot info permanent pointer
 extern seL4_BootInfo* boot_info;
 
+// Error message pointer
+extern const char* error_msg;
+
 // Info about available memory
 extern seL4_Word num_empty_slots;
 extern seL4_Word num_memory_chunks; // Total number of usable memory chunks
@@ -28,8 +31,9 @@ extern seL4_CPtr page_table_slot;
 // Memory allocator
 
 extern seL4_CPtr memory_allocator_tcb_slot;
+extern seL4_CPtr memory_allocator_stack_slot;
 extern seL4_CPtr memory_allocator_croot_slot;
-extern seL4_CPtr memory_allocator_ipc_buffer_slot;
+extern seL4_CPtr memory_allocator_ipc_slot;
 extern seL4_CPtr memory_allocator_tls_slot; // This is under the memory allocator section for organization, but it doesn't need to be passed to the thread
 
 extern char memory_allocator_stack[1024] __attribute__((aligned(16)));

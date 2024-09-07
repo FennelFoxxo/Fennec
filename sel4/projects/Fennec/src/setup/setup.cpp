@@ -2,7 +2,6 @@
 
 #include "globals/globals.h"
 #include "memory.h"
-#include "memalloc.h"
 
 extern "C" {
 #include <utils/util.h>
@@ -15,17 +14,19 @@ bool setBootInfo() {
 
 bool setCptrs() {
 	Globals::num_empty_slots = Globals::boot_info->empty.end - Globals::boot_info->empty.start;
-	if (Globals::num_empty_slots < GLOBALS_MIN_EMPTY_SLOTS) return false; // Not enough empty cslots to satisfy requirements
+	retErrorIfFail(Globals::num_empty_slots >= GLOBALS_MIN_EMPTY_SLOTS, "Not enough empty slots");
 	
 	seL4_CPtr empty_ptr = Globals::boot_info->empty.start;
-	Globals::bootstrap_memory_slot				= empty_ptr++;
-	Globals::L2_memory_slot						= empty_ptr++;
-	Globals::page_directory_slot					= empty_ptr++;
-	Globals::page_table_slot						= empty_ptr++;
-	Globals::memory_allocator_tcb_slot			= empty_ptr++;
-	Globals::memory_allocator_croot_slot			= empty_ptr++;
-	Globals::memory_allocator_ipc_buffer_slot	= empty_ptr++;
-	Globals::memory_allocator_tls_slot			= empty_ptr++;
+	Globals::bootstrap_memory_slot			= empty_ptr++;
+	Globals::L2_memory_slot					= empty_ptr++;
+	Globals::page_directory_slot			= empty_ptr++;
+	Globals::page_table_slot				= empty_ptr++;
+	
+	Globals::memory_allocator_tcb_slot		= empty_ptr++;
+	Globals::memory_allocator_stack_slot	= empty_ptr++;
+	Globals::memory_allocator_croot_slot	= empty_ptr++;
+	Globals::memory_allocator_ipc_slot		= empty_ptr++;
+	Globals::memory_allocator_tls_slot		= empty_ptr++;
 	
 	return true;
 }
@@ -40,7 +41,7 @@ bool setupGlobals() {
 bool Setup::setup() {
 	retFalseIfFail(	setupGlobals());
 	retFalseIfFail(	setupMemory());
-	retFalseIfFail(	setupMemAllocThread());
+	//retFalseIfFail(	setupMemAllocThread());
 	
 	return true;
 }
