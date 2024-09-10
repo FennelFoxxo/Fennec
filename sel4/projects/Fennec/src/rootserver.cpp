@@ -15,11 +15,7 @@ void halt(const char* halt_message = nullptr) {
 	seL4_TCB_Suspend(seL4_CapInitThreadTCB);
 }
 
-bool dothingthatfails() {
-	retErrorIfFail(5 < 2, "Five is less than two");
-}
-
-int main(void) {	
+int main(void) {
 	printf("\n\n--- ROOTSERVER START ---\n\n");
 	
 	if (Setup::setup()) printf("Globals setup successfully\n");
@@ -51,6 +47,4 @@ int main(void) {
 
 	halt();
     return 0;
-
-while (1);
 }
