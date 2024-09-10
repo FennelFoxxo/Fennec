@@ -16,8 +16,8 @@ seL4_Word calcL2Index() { return Globals::num_memory_chunks / BIT(GLOBALS_CNODE_
 seL4_Word calcL1Index() { return Globals::num_memory_chunks % BIT(GLOBALS_CNODE_BITS); }
 seL4_UntypedDesc* getRegionDesc(seL4_CPtr untyped_ptr) { return &Globals::boot_info->untypedList[untyped_ptr - Globals::boot_info->untyped.start]; }
 
-// Only non-device memory at least LARGE_CHUNK in size - make sure to only use memory above where grub might place modules
-bool isAcceptableRegion(seL4_UntypedDesc* desc) { return !desc->isDevice && desc->sizeBits >= GLOBALS_LARGE_CHUNK_BITS && desc->paddr > 0xF00000; }
+// Only non-device memory at least LARGE_CHUNK in size
+bool isAcceptableRegion(seL4_UntypedDesc* desc) { return !desc->isDevice && desc->sizeBits >= GLOBALS_LARGE_CHUNK_BITS; }
 
 // Calculate how many total and usable chunks we have, before doing any retyping
 void precalcChunkCount() {
