@@ -13,6 +13,9 @@ struct ThreadConfig {
 	seL4_CPtr ipc_src_buffer_slot = 0;
 	seL4_CPtr tls_src_slot = 0;
 	
+	seL4_CPtr extra_slots[MAX_THREAD_EXTRA_SLOTS];
+	seL4_Word num_extra_slots = 0;
+	
 	seL4_Word stack_vaddr_offset = 0;
 	seL4_Word ipc_vaddr_offset = 0;
 	seL4_Word tls_vaddr_offset = 0;

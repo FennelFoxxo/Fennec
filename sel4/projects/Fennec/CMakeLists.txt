@@ -13,6 +13,9 @@ find_package(musllibc REQUIRED)
 find_package(util_libs REQUIRED)
 find_package(seL4_libs REQUIRED)
 
+find_package(memory_allocator REQUIRED)
+import_memory_allocator()
+
 sel4_import_kernel()
 elfloader_import_project()
 
@@ -37,8 +40,7 @@ target_include_directories(Fennec PRIVATE src)
 target_compile_options(Fennec PRIVATE -O0 -g -fno-inline-small-functions)
 
 # List of libraries to link with the application.
-target_link_libraries(Fennec sel4muslcsys)
-#target_link_libraries(Fennec sel4runtime utils sel4muslcsys)
+target_link_libraries(Fennec sel4muslcsys memory_allocator)
 
 # Tell the build system that this application is the root task. 
 include(rootserver)

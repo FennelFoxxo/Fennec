@@ -20,6 +20,8 @@
 #define THREAD_IPC_BUFFER_SLOT 3 // CSlot that points to IPC buffer
 #define THREAD_EXTRA_SLOTS 20	// Index where extra caps are placed into spawned thread's cnode
 
+#define MAX_THREAD_EXTRA_SLOTS 20
+
 #define MEM_ALLOC_PRIORITY 250
 
 

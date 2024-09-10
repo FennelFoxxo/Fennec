@@ -23,7 +23,6 @@ namespace MemAlloc {
 		
 		printf("Attempting to suspend thread...\n");
 		seL4_TCB_Suspend(calcRootCSlotAddress(THREAD_TCB_SLOT));
-		seL4_TCB_Suspend(THREAD_TCB_SLOT);
 		
 		printf("This should not print!!\n");
 	}

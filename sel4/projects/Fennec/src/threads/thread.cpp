@@ -95,11 +95,12 @@ bool Thread::copyCSlots() {
 							seL4_CapInitThreadCNode, config.tcb_src_slot, seL4_WordBits, seL4_AllRights);
 	retErrorIfFail(error == seL4_NoError, "Failed to copy thread TCB cap into thread cspace during thread setup");
 	
-	/*
-	// Copy L2 memory CNode into target thread cspace
-	error = seL4_CNode_Copy(Globals::memory_allocator_croot_slot, MEM_ALLOC_SLOT_L2_MEM_CNODE, GLOBALS_CNODE_BITS,
-							seL4_CapInitThreadCNode, Globals::L2_memory_slot, seL4_WordBits, seL4_AllRights);
-	retFalseIfFail(error == seL4_NoError);*/
+	// Copy extra slots into thread cspace
+	for (seL4_Word i = 0; i < config.num_extra_slots; i++) {
+		error = seL4_CNode_Copy(Globals::memory_allocator_croot_slot, THREAD_EXTRA_SLOTS + i, GLOBALS_CNODE_BITS,
+							seL4_CapInitThreadCNode, config.extra_slots[i], seL4_WordBits, seL4_AllRights);
+		retErrorIfFail(error == seL4_NoError, "Failed to copy extra slots into thread cspace during thread setup");
+	}
 
 	return true;
 }
