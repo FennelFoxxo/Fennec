@@ -1,0 +1,1 @@
+#define MYNUM 5

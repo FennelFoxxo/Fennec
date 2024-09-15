@@ -5,6 +5,8 @@ project(Fennec C CXX ASM)
 
 include(settings.cmake)
 
+find_package(memory_allocator REQUIRED)
+
 # In future tutorials, these setup steps will be replaced with
 # sel4_tutorials_setup_roottask_tutorial_environment()
 find_package(seL4 REQUIRED)
@@ -12,9 +14,6 @@ find_package(elfloader-tool REQUIRED)
 find_package(musllibc REQUIRED)
 find_package(util_libs REQUIRED)
 find_package(seL4_libs REQUIRED)
-
-find_package(memory_allocator REQUIRED)
-import_memory_allocator()
 
 sel4_import_kernel()
 elfloader_import_project()

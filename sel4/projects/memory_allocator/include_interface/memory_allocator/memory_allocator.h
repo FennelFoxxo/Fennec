@@ -1,0 +1,4 @@
+#define MEMORY_ALLOCATOR_START_SYMBOL _binary_memory_allocator_bin_start
+#define MEMORY_ALLOCATOR_SIZE_SYMBOL _binary_memory_allocator_bin_size
+
+#define mything 5

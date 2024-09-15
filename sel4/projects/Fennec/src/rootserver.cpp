@@ -4,18 +4,19 @@
 #include "threads/memalloc.h"
 #include "threads/thread.h"
 
+#include <memory_allocator/memory_allocator.h>
+
 extern "C" {
 #include <stdio.h>
 #include <sel4/sel4.h>
 #include <utils/util.h>
 }
 
+extern void* MEMORY_ALLOCATOR_START_SYMBOL;
+extern void* MEMORY_ALLOCATOR_SIZE_SYMBOL;
 
-extern void* _binary_memory_allocator_exec_start;
-extern void* _binary_memory_allocator_exec_size;
-
-void* memory_allocator_elf_start = &_binary_memory_allocator_exec_start;
-seL4_Word memory_allocator_elf_size = (seL4_Word)&_binary_memory_allocator_exec_size;
+void* memory_allocator_elf_start = &MEMORY_ALLOCATOR_START_SYMBOL;
+seL4_Word memory_allocator_elf_size = (seL4_Word)&MEMORY_ALLOCATOR_SIZE_SYMBOL;
 
 
 
