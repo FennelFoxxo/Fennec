@@ -11,13 +11,13 @@ extern "C" {
 #include <sel4/sel4.h>
 #include <utils/util.h>
 }
-
+/*
 extern void* MEMORY_ALLOCATOR_START_SYMBOL;
 extern void* MEMORY_ALLOCATOR_SIZE_SYMBOL;
 
 void* memory_allocator_elf_start = &MEMORY_ALLOCATOR_START_SYMBOL;
 seL4_Word memory_allocator_elf_size = (seL4_Word)&MEMORY_ALLOCATOR_SIZE_SYMBOL;
-
+*/
 
 
 void halt(const char* halt_message = nullptr) {
@@ -38,10 +38,10 @@ void dumpelf() {
 
 int main(void) {
 	printf("\n\n--- ROOTSERVER START ---\n\n");
+    
+	//dumpelf();
 	
-	dumpelf();
-	
-	printf("Memory allocator elf start: %p, size: %lu\n", memory_allocator_elf_start, memory_allocator_elf_size);
+	printf("Memory allocator elf start: %p, size: %llu\n", memory_allocator_elf_start, memory_allocator_elf_size);
 	
 	if (Setup::setup()) printf("Globals setup successfully\n");
 	else halt("Failed to setup globals");

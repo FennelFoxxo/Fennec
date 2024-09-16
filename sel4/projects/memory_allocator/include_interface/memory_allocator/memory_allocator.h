@@ -1,4 +1,7 @@
-#define MEMORY_ALLOCATOR_START_SYMBOL _binary_memory_allocator_bin_start
-#define MEMORY_ALLOCATOR_SIZE_SYMBOL _binary_memory_allocator_bin_size
+#pragma once
 
-#define mything 5
+extern void* _binary_memory_allocator_bin_start;
+extern void* _binary_memory_allocator_bin_size;
+
+void* memory_allocator_elf_start = &_binary_memory_allocator_bin_start;
+long long unsigned memory_allocator_elf_size = (long long unsigned)&_binary_memory_allocator_bin_size;;
