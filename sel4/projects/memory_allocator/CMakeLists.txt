@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.7.2)
 project(memory_allocator)
 
+
 # Compile and link into executable
 add_executable(memory_allocator-bin)
 target_sources(memory_allocator-bin PRIVATE src/main.c)
