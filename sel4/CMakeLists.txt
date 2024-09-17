@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.7.2)
 project(root_task C CXX ASM)
 
 # Set flags
-set(KernelHugePage OFF)
-set(PLATFORM x86_64)
-set(SIMULATION TRUE)
+set(KernelHugePage OFF CACHE BOOL "Compile for huge-page enabled processors")
+set(PLATFORM "x86_64" CACHE STRING "Platform to compile for")
+set(SIMULATION TRUE CACHE BOOL "Build for simulation")
 
 include(${CMAKE_CURRENT_LIST_DIR}/settings/settings.cmake)
 
@@ -26,7 +26,6 @@ sel4_libs_import_libraries()
 
 # Our root task
 find_package(root_task REQUIRED)
-
 
 include(rootserver)
 DeclareRootserver(root_task)
