@@ -19,3 +19,4 @@
 [submodule "bootloader/grub"]
 	path = bootloader/grub
 	url = https://git.savannah.gnu.org/git/grub.git
+	ignore = dirty
