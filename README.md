@@ -1,4 +1,4 @@
-HOW TO COMPILE
+# Compiling
 ```
 git clone --recurse-submodules https://github.com/FennelFoxxo/Fennec.git
 cd Fennec
@@ -6,7 +6,7 @@ sudo ./setup
 make
 ```
 
-HOW TO USE
+# Usage
 The image final image is written to build/disk.img. It can be simulated with:
 ```
 make simulate
