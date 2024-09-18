@@ -1,6 +1,13 @@
 HOW TO COMPILE
-Please use `git clone --recurse-submodules <url>` to install properly - otherwise submodules will not be downloaded
-Once downloaded, run `make` in the root project folder. The final image will written to build/disk.img
+```
+git clone --recurse-submodules https://github.com/FennelFoxxo/Fennec.git
+cd Fennec
+sudo ./setup
+make
+```
 
 HOW TO USE
-The image can be written to a flash drive directly using `dd`, or by using a tool such as balenaEtcher
+The image final image is written to build/disk.img. It can be simulated with:
+```
+make simulate
+```
