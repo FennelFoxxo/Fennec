@@ -9,9 +9,9 @@ list(
         ${CMAKE_CURRENT_LIST_DIR}/cmake
 )
 
-find_package(bootloader)
-find_package(disk_image)
-find_package(sel4_build)
+find_package(bootloader REQUIRED)
+find_package(disk_image REQUIRED)
+find_package(sel4_build REQUIRED)
 
 bootloader_compile_if_needed()
 
