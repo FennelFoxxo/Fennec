@@ -16,6 +16,7 @@ find_package(seL4_libs REQUIRED)
 
 # These packages need to be linked with our root task, but should be included before special compilation flags get set
 find_package(memory_allocator REQUIRED)
+find_package(elf_parser REQUIRED)
 
 sel4_import_kernel()
 elfloader_import_project()

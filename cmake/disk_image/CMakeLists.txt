@@ -1,4 +1,4 @@
-# find_package(bootloader)
+find_package(bootloader)
 
 function(efi_partition_create_directories)
     FILE(MAKE_DIRECTORY
@@ -46,7 +46,7 @@ function(create_disk_image)
     create_efi_partition()
     add_custom_command(
         OUTPUT ${disk_img_path}
-        DEPENDS efi_partition
+        DEPENDS efi_partition ${efi_partition_img_path}
         COMMAND dd if=${efi_partition_img_path} of=${disk_img_path} oflag=seek_bytes bs=1M seek=2048b status=none
         COMMAND parted -s ${disk_img_path} mklabel gpt mkpart '"EFI SYSTEM"' fat16 2048s 100% set 1 esp on
         VERBATIM

@@ -10,14 +10,9 @@ extern "C" {
 #include <stdio.h>
 #include <sel4/sel4.h>
 #include <utils/util.h>
-}
-/*
-extern void* MEMORY_ALLOCATOR_START_SYMBOL;
-extern void* MEMORY_ALLOCATOR_SIZE_SYMBOL;
 
-void* memory_allocator_elf_start = &MEMORY_ALLOCATOR_START_SYMBOL;
-seL4_Word memory_allocator_elf_size = (seL4_Word)&MEMORY_ALLOCATOR_SIZE_SYMBOL;
-*/
+#include <elfparser.h>
+}
 
 
 void halt(const char* halt_message = nullptr) {
@@ -38,13 +33,27 @@ void dumpelf() {
 
 int main(void) {
 	printf("\n\n--- ROOTSERVER START ---\n\n");
-    
-	//dumpelf();
 	
 	printf("Memory allocator elf start: %p, size: %llu\n", memory_allocator_elf_start, memory_allocator_elf_size);
 	
 	if (Setup::setup()) printf("Globals setup successfully\n");
 	else halt("Failed to setup globals");
+    
+    ElfParser_Header memory_allocator_elf_header;
+    ElfParser_Error ep_err = elfparser_get_header(memory_allocator_elf_start, memory_allocator_elf_size, &memory_allocator_elf_header);
+    if (ep_err != ELFPARSER_NOERROR) halt("Unable to load memory allocator header");
+    
+    ElfParser_ProgramHeader program_header;
+    for (uint64_t i = 0; i < memory_allocator_elf_header.e_phnum; i++) {
+        ep_err = elfparser_get_program_header(memory_allocator_elf_start, &memory_allocator_elf_header, i, &program_header);
+        if (ep_err != ELFPARSER_NOERROR) halt("Unable to read program header");
+        if (program_header.p_type != ELFPARSER_PT_LOAD) continue;
+        printf("  Program Header #%llu vaddr = 0x%llx, size = 0x%llx\n", i, program_header.p_vaddr, program_header.p_memsz);
+    }
+    
+    
+    
+    
 	
 	bool success;
 	Thread::Thread mem_alloc_thread({

@@ -20,3 +20,6 @@
 	path = bootloader/grub
 	url = https://git.savannah.gnu.org/git/grub.git
 	ignore = dirty
+[submodule "sel4/projects/elf_parser/ElfParser"]
+	path = sel4/projects/elf_parser/ElfParser
+	url = https://github.com/FennelFoxxo/ElfParser.git
