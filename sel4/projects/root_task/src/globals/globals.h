@@ -22,19 +22,47 @@ extern seL4_Word num_memory_chunks; // Total number of usable memory chunks
 // Some chunks of memory are needed to spin up initial threads - this is the index to the first free chunk after those, that can be dynamically allocated to other threads
 extern seL4_Word memory_chunks_allocable_start;
 
+
 // CSlots, initialized by setup_cptrs() - actual allocations are done by various allocate functions
-extern seL4_CPtr bootstrap_memory_slot; // LARGE_CHUNK_SIZE-sized block of memory for initial bootstrapping tasks
-extern seL4_CPtr L2_memory_slot;		// Chunk of memory to be turned into a 2-level cnode structure to hold large chunk untypeds
-extern seL4_CPtr page_directory_slot;
-extern seL4_CPtr page_table_slot;
+extern seL4_CPtr bootstrap_empty_start; // Start of empty cslots
 
-// Memory allocator
+// Slot locations in initial root task cnode - offsets from bootstrap_empty_start. Only used until new croot is set
+enum class BootstrapSlots {
+    L2_memory,              // Chunk of memory to be turned into a 2-level cnode structure to hold large chunk untypeds
+    bootstrap_memory,       // LARGE_CHUNK_SIZE-sized block of memory for initial bootstrapping tasks
+    memory_allocator_chunk, // Chunk of data to use for mapping memory allocator thread
+    croot,                  // New cnode to set as the root task croot
+       
+    
+};
 
-extern seL4_CPtr memory_allocator_tcb_slot;
-extern seL4_CPtr memory_allocator_stack_slot;
-extern seL4_CPtr memory_allocator_croot_slot;
-extern seL4_CPtr memory_allocator_ipc_slot;
-extern seL4_CPtr memory_allocator_tls_slot; // This is under the memory allocator section for organization, but it doesn't need to be passed to the thread
+enum class Slots {
+    bootstrap_caps = 0,
+    assorted_caps,
+    memory_allocator_frames, // CNode of frames used by memory allocator thread
+    temp_slot // Temp slot to place new objects before mutating them
+};
+
+enum class AssortedSlots {
+    bootstrap_memory,
+    L2_memory,
+    memory_allocator_chunk,
+    
+    bootstrap_pdpt,
+    bootstrap_pd,
+    bootstrap_pt,
+    
+    thread_temp_frame, // Temporary page used for copying data into thread address space
+
+    memory_allocator_tcb,
+    memory_allocator_croot,
+    memory_allocator_vspace,
+    memory_allocator_ipc_buffer,
+    
+    // Room for paging structures to be created for mapping memory allocator in thread vspace
+    memory_allocator_paging_objects_start,
+    memory_allocator_paging_objects_end = memory_allocator_paging_objects_start + 16, // This endpoint is inclusive
+};
 
 extern char memory_allocator_stack[1024] __attribute__((aligned(16)));
 

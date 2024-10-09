@@ -1,10 +1,10 @@
 #include "memory_allocator.h"
 
-int main() {
-	return 0;
+#include <stdio.h>
+#include <sel4/sel4.h>
+
+int main(seL4_Word arg) {
+    seL4_TCB_SetPriority(0, 0, arg);
+    seL4_TCB_Suspend(0);
 }
 
-
-int TestSymbol(int a, int b) {
-	return a+b;
-}

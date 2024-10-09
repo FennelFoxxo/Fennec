@@ -6,10 +6,13 @@ add_executable(root_task)
 target_sources(root_task PRIVATE
     src/rootserver.cpp
 	src/globals/globals.cpp
-	src/setup/setup.cpp
-	src/setup/memory.cpp
-	src/threads/thread.cpp
-	src/threads/memalloc.cpp
+
+	src/setup/break_memory_into_chunks.cpp
+	src/setup/reserve_required_memory.cpp
+	src/setup/setup_bootstrap_mapping.cpp
+	src/setup/setup_new_cspace.cpp
+	src/setup/init_boot_info.cpp
+	src/setup/launch_memory_allocator_thread.cpp
 )
 
 target_include_directories(root_task PRIVATE src)
