@@ -4,12 +4,9 @@ SHELL := /bin/bash
 
 SIMULATE_OPTIONS=-cpu Nehalem,-vme,-pdpe1gb,-xsave,-xsaveopt,-xsavec,-fsgsbase,-invpcid,+syscall,+lm,enforce -serial stdio -m size=300M -gdb tcp::1234
 
-REQUIRED_PACKAGES=make cmake ninja-build build-essential autoconf automake autopoint bison flex pkg-config libxml2-utils mtools python3-pip python3-virtualenv
-REQUIRED_PYTHON_MODULES=ply Jinja2 lxml pyyaml
-
 VENV_SOURCE_CMD=source .venv/bin/activate
 
-.PHONY: build clean simulate install-packages
+.PHONY: build clean simulate
 
 build: $(BUILD_DIR)/build.ninja
 	$(VENV_SOURCE_CMD) && cmake --build $(BUILD_DIR)
