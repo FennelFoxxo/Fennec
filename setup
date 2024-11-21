@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REQUIRED_PACKAGES="make cmake ninja-build build-essential autoconf automake autopoint bison flex pkg-config libxml2-utils mtools python3-pip python3-venv qemu-system"
+REQUIRED_PACKAGES="make cmake ninja-build build-essential autoconf automake autopoint bison dosfstools flex parted pkg-config libxml2-utils mtools python3-pip python3-venv qemu-system"
 REQUIRED_PYTHON_MODULES="ply Jinja2 lxml pyyaml"
 
 if [ $SUDO_USER ]; then
@@ -9,6 +9,6 @@ else
     real_user=$(whoami)
 fi
 
-apt install $REQUIRED_PACKAGES
+apt install -y $REQUIRED_PACKAGES
 sudo -u $real_user python3 -m venv .venv/ && source .venv/bin/activate && pip install $REQUIRED_PYTHON_MODULES
 chown -R $real_user:$real_user .venv/
