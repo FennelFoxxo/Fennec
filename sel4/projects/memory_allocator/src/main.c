@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <sel4/sel4.h>
 
-int main(seL4_Word arg) {
-    seL4_TCB_SetPriority(0, 0, arg);
+void foo();
+
+int main(int argc, char* argv[]) {
+    seL4_TCB_SetPriority(0, 0, (seL4_Word)argv[1]);
     seL4_TCB_Suspend(0);
 }
 

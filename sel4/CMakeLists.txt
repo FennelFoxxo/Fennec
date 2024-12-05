@@ -15,15 +15,18 @@ find_package(util_libs REQUIRED)
 find_package(seL4_libs REQUIRED)
 
 # These packages need to be linked with our root task, but should be included before special compilation flags get set
-find_package(memory_allocator REQUIRED)
 find_package(elf_parser REQUIRED)
 
+# Setting build flags, etc.
 sel4_import_kernel()
 elfloader_import_project()
 musllibc_setup_build_environment_with_sel4runtime()
 sel4_import_libsel4()
 util_libs_import_libraries()
 sel4_libs_import_libraries()
+
+# Packages which should be compiled with sel4 runtime
+find_package(memory_allocator REQUIRED)
 
 # Our root task
 find_package(root_task REQUIRED)

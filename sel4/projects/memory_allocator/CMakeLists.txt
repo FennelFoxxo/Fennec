@@ -8,15 +8,11 @@ add_executable(memory_allocator-bin)
 target_sources(memory_allocator-bin PRIVATE src/main.c)
 target_include_directories(memory_allocator-bin PRIVATE "include_private")
 target_compile_options(memory_allocator-bin PRIVATE -O0)
-target_link_options(memory_allocator-bin PRIVATE -static -nostdlib -e main)
+# target_link_options(memory_allocator-bin PRIVATE -static -nostdlib -e main)
+target_link_options(memory_allocator-bin PRIVATE -static -nostdlib)
 target_link_libraries(memory_allocator-bin
-	muslc
         sel4
-	cpio
-        utils
         sel4utils
-        sel4muslcsys_Config
-        sel4_autoconf
 )
 
 # Wrap entire library elf file in a section which can be imported

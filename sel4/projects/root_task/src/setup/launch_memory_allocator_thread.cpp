@@ -3,6 +3,8 @@
 #include "globals/globals.h"
 #include <memory_allocator/memory_allocator.h>
 
+#include <stack.hpp>
+
 extern "C" {
 #include <stdio.h>
 #include <sel4/sel4.h>
@@ -15,6 +17,7 @@ extern "C" {
 static ElfParser_Header elf_header;
 static seL4_Word current_frame = 0;
 static seL4_Word current_free_paging_cap = GLOBALS_ASSORTED_CSLOT_INDEX(memory_allocator_paging_objects_start);
+static seL4_Word stack_bytes_pushed = 0;
 
 static bool createVSpace() {
     seL4_Error error = seL4_Untyped_Retype(GLOBALS_ASSORTED_CSLOT(bootstrap_memory), seL4_X64_PML4Object, 0,
@@ -177,8 +180,52 @@ static bool loadElf() {
 }
 
 static bool setupStack() {
+    
+    
+    retFalseIfFail(mapCurrentFrame(seL4_CapInitThreadVSpace, TEMP_FRAME_VADDR));
+    
+    // Create stack object at top of page
+    long long unsigned temp_stack_top_initial = TEMP_FRAME_VADDR + BIT(GLOBALS_SMALL_CHUNK_BITS);
+    Stack stack(temp_stack_top_initial);
+    
+    const char* process_name = (const char*)stack.pushString("My process!");
+    
+    
+    // Align stack
+    while ((temp_stack_top_initial - stack.getStackTop()) % sizeof(seL4_Word)) {
+        stack.push<char>(0);
+    }
+    
+
+    // Auxiliary vector - null terminator
+    stack.push(auxv_t{.a_type = AT_NULL});
+    
+    // Provide IPC buffer address
+    stack.push(auxv_t{.a_type = AT_SEL4_IPC_BUFFER_PTR, .a_un{.a_ptr = (void*)THREAD_IPC_BUFFER_VADDR} });
+    
+    
+    // Environment pointer vector - null terminator
+    stack.push(SEL4RUNTIME_NULL);
+    
+    // Empty
+    stack.push<seL4_Word>(0);
+
+    // Second argument
+    stack.push<seL4_Word>(22);
+
+    // Push process name as first argument
+    stack.push(process_name - temp_stack_top_initial + THREAD_STACK_TOP_VADDR);
+    
+    // Argument count
+    stack.push<seL4_Word>(2);
+    
+    stack_bytes_pushed = temp_stack_top_initial - stack.getStackTop();
+    
+    retFalseIfFail(unmapCurrentFrame());
+    
     // The top of the stack is at the end of the page, so we actually need to map the page under the stack top address
     retErrorIfFail(mapCurrentFrame(GLOBALS_ASSORTED_CSLOT(memory_allocator_vspace), THREAD_STACK_TOP_VADDR - BIT(GLOBALS_SMALL_CHUNK_BITS)), "Failed to map memory allocator stack");
+
     return true;
 }
 
@@ -223,7 +270,7 @@ static bool setupRegisters() {
 	retErrorIfFail(error == seL4_NoError, "Failed to read memory allocator registers");
 
 	regs.rip = (seL4_Word)elf_header.e_entry;
-	regs.rsp = THREAD_STACK_TOP_VADDR; // Set stack pointer to top of stack
+	regs.rsp = THREAD_STACK_TOP_VADDR - stack_bytes_pushed; // Set stack pointer to top of stack
 	regs.rdi = 42;
 
 	error = seL4_TCB_WriteRegisters(GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), 0, 0, sizeof(regs)/sizeof(seL4_Word), &regs);
@@ -233,18 +280,6 @@ static bool setupRegisters() {
 }
 
 static bool setupTLS() {
-    retErrorIfFail(mapCurrentFrame(seL4_CapInitThreadVSpace, TEMP_FRAME_VADDR), "Failed to map memory allocator TLS in root task address space");
-
-    seL4_Word tls = sel4runtime_write_tls_image((void*)(TEMP_FRAME_VADDR));
-
-	int error = sel4runtime_set_tls_variable(tls, __sel4_ipc_buffer, (seL4_IPCBuffer*)THREAD_IPC_BUFFER_VADDR);
-	retErrorIfFail(error == seL4_NoError, "Failed to set memory allocator ipc_buffer TLS variable");
-    
-    // Adjust base to destination address
-	error = seL4_TCB_SetTLSBase(GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), tls + THREAD_TLS_VADDR - BOOTSTRAP_VADDR);
-	retErrorIfFail(error == seL4_NoError, "Failed to set memory allocator TLS base");
-    
-    retFalseIfFail(unmapCurrentFrame());
     retErrorIfFail(mapCurrentFrame(GLOBALS_ASSORTED_CSLOT(memory_allocator_vspace), THREAD_TLS_VADDR), "Failed to map memory allocator TLS");
     return true;
 }
@@ -279,6 +314,7 @@ static bool resumeMemoryAllocatorThread() {
 
 bool Setup::launchMemoryAllocatorThread() {
     retFalseIfFail(setupMemoryAllocatorThread());
+    seL4_DebugDumpScheduler();
     retFalseIfFail(resumeMemoryAllocatorThread());
     return true;
 }
