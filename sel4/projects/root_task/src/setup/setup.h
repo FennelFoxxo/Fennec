@@ -7,9 +7,9 @@ namespace Setup {
 bool initBootInfo();
 
 bool breakMemoryIntoChunks();
-bool reserveRequiredMemory();
+bool setupMapping();
+bool setupGraphics();
 bool setupNewCSpace();
-bool setupBootstrapMapping();
 bool launchMemoryAllocatorThread();
 
 }
