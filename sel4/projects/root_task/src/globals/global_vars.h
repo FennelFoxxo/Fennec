@@ -1,6 +1,7 @@
 #pragma once
 
 #include "macros.h"
+#include "mapping.hpp"
 
 #include <stdint.h>
 
@@ -30,6 +31,9 @@ extern seL4_Word memory_chunks_next_available;
 // of seL4_WordBits. Code that relies on the memory tree must be made aware about
 // whether it has been moved yet
 extern bool has_memory_tree_been_moved;
+
+// Object for abstracting away the logic of creating paging objects
+extern MappingContext mapping_context;
 
 // CSlots, initialized by setup_cptrs() - actual allocations are done by various allocate functions
 extern seL4_CPtr bootstrap_empty_start; // Start of empty cslots

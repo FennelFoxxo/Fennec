@@ -13,6 +13,8 @@ seL4_Word memory_chunks_next_available = 0;
 
 bool has_memory_tree_been_moved = false;
 
+MappingContext mapping_context;
+
 seL4_CPtr bootstrap_empty_start = 0;
 
 MultibootFrameBuffer* framebuffer_info = nullptr;

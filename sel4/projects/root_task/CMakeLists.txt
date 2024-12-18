@@ -7,6 +7,7 @@ target_sources(root_task PRIVATE
     src/rootserver.cpp
     	src/graphics.cpp
 	src/mem_tree.cpp
+	src/mapping.cpp
 	src/globals/global_vars.cpp
 
 	src/setup/break_memory_into_chunks.cpp

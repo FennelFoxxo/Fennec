@@ -3,6 +3,7 @@
 
 #include "stack.hpp"
 #include "graphics.hpp"
+#include "mapping.hpp"
 
 extern "C" {
 #include <stdio.h>
@@ -14,6 +15,11 @@ void halt(const char* halt_message = nullptr) {
 	if (halt_message != nullptr) printf("%s\n  - Error: %s\n", halt_message, GLOBALS_GET_ERROR());
 	seL4_TCB_Suspend(seL4_CapInitThreadTCB);
 }
+
+
+bool foo(seL4_CPtr* a, seL4_CPtr* b) {return true;}
+
+MappingContext m(3, nullptr, nullptr, nullptr, {});
 
 int main(void) {
 	printf("\n\n--- ROOTSERVER START ---\n\n");

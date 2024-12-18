@@ -2,6 +2,7 @@
 
 #include "globals/globals.h"
 #include "mem_tree.hpp"
+#include "mapping.hpp"
 #include <memory_allocator/memory_allocator.h>
 
 #include <stack.hpp>
@@ -17,9 +18,22 @@ extern "C" {
 
 static ElfParser_Header elf_header;
 static seL4_Word current_frame = 0;
-static seL4_Word current_free_paging_cap = GLOBALS_ASSORTED_CSLOT_INDEX(memory_allocator_paging_objects_start);
+static seL4_Word current_free_paging_cap = GLOBALS_ASSORTED_CSLOT(memory_allocator_paging_objects_start);
 static seL4_Word stack_bytes_pushed = 0;
 static seL4_CPtr untyped_cptr, return_cptr;
+
+
+static bool getMappingCSlotFunc(seL4_CPtr* cptr) {
+    retErrorIfFail(current_free_paging_cap != GLOBALS_ASSORTED_CSLOT(memory_allocator_paging_objects_end), "Ran out of mapping caps!");
+    *cptr = current_free_paging_cap++;
+    return true;
+}
+
+
+static MappingContext dest_vspace_mapping_context(
+    GLOBALS_ASSORTED_CSLOT(memory_allocator_vspace), MemTree::getFreeUntyped, MemTree::returnUsedUntyped,
+    getMappingCSlotFunc, {0, 0, GLOBALS_CSLOT_INDEX(temp_slot), PAGE_CNODE_BITS}
+);
 
 static bool getFrame() {
     return MemTree::getFreeUntyped(&untyped_cptr, &return_cptr);
@@ -94,75 +108,22 @@ static bool setupMemoryAllocatorFrames() {
     return true;
 }
 
-static bool mapNewPagingStructure(seL4_Word type, seL4_CPtr vspace, seL4_Word address) {
-    retErrorIfFail(current_free_paging_cap <= GLOBALS_ASSORTED_CSLOT_INDEX(memory_allocator_paging_objects_end), "Ran out of paging caps while loading memory allocator!");
-    
-    retFalseIfFail(getFrame());
-    
-    seL4_Error error = seL4_Untyped_Retype(untyped_cptr, type, 0,
-                                           seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(assorted_caps), GLOBALS_SMALL_CNODE_BITS, current_free_paging_cap, 1);
-	retErrorIfFail(error == seL4_NoError, "Failed to retype into x86 paging structure while loading memory allocator!");
-    
-    retFalseIfFail(returnFrame());
-    
-    switch(type) {
-        case seL4_X86_PageTableObject:
-            error = seL4_X86_PageTable_Map(GLOBALS_CSLOT(assorted_caps) | current_free_paging_cap, vspace, address, seL4_X86_Default_VMAttributes);
-            break;
-        case seL4_X86_PageDirectoryObject:
-            error = seL4_X86_PageDirectory_Map(GLOBALS_CSLOT(assorted_caps) | current_free_paging_cap, vspace, address, seL4_X86_Default_VMAttributes);
-            break;
-        case seL4_X86_PDPTObject:
-            error = seL4_X86_PDPT_Map(GLOBALS_CSLOT(assorted_caps) | current_free_paging_cap, vspace, address, seL4_X86_Default_VMAttributes);
-            break;
-    }
-    current_free_paging_cap++;
-    retErrorIfFail(error == seL4_NoError, "Failed to create memory allocator paging structure!");
-    return true;
-}
-
 static bool mapCurrentFrame(seL4_CPtr vspace, seL4_Word addr_to_map_at) {
     // Make sure we have a free frame
     retErrorIfFail(current_frame < BIT(GLOBALS_MEMORY_ALLOCATOR_FRAMES_CNODE_BITS), "Ran out of frames while loading memory allocator!");
     
-    seL4_Error error = seL4_X86_Page_Map(GLOBALS_CSLOT(memory_allocator_frames) | current_frame, vspace, addr_to_map_at,
-                                         seL4_ReadWrite, seL4_X86_Default_VMAttributes);
-    if (error == seL4_NoError) {
-        current_frame++;
-        return true;
-    }
-	retErrorIfFail(error == seL4_FailedLookup, "Error mapping memory allocator frame!"); // Failed lookup is ok, we just need to map more structures
-    
-    seL4_Word failed_level = seL4_MappingFailedLookupLevel();
-    
-    // Need to map PDPT
-    if (failed_level >= 39) {
-        retFalseIfFail(mapNewPagingStructure(seL4_X86_PDPTObject, vspace, addr_to_map_at));
+    if (vspace == seL4_CapInitThreadVSpace) {
+        return Globals::mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | current_frame++, addr_to_map_at);
     }
     
-    // Need to map PD
-    if (failed_level >= 30) {
-        retFalseIfFail(mapNewPagingStructure(seL4_X86_PageDirectoryObject, vspace, addr_to_map_at));
-    }
-    
-    // Need to map PT
-    if (failed_level >= 21) {
-        retFalseIfFail(mapNewPagingStructure(seL4_X86_PageTableObject, vspace, addr_to_map_at));
-    }
-    
-    // Retry mapping
-    error = seL4_X86_Page_Map(GLOBALS_CSLOT(memory_allocator_frames) | current_frame, vspace, addr_to_map_at,
-                              seL4_ReadWrite, seL4_X86_Default_VMAttributes);
-	retErrorIfFail(error == seL4_NoError, "Error mapping memory allocator frame!");
-    current_frame++;
-    return true;
+    return dest_vspace_mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | current_frame++, addr_to_map_at);
 }
 
 static bool unmapCurrentFrame() {
     current_frame--;
-    seL4_Error error = seL4_X86_Page_Unmap(GLOBALS_CSLOT(memory_allocator_frames) | current_frame);
-    retErrorIfFail(error == seL4_NoError, "Error unmapping memory allocator frame!");
-    return true;
+
+    return Globals::mapping_context.unmapFrame(GLOBALS_CSLOT(memory_allocator_frames) | current_frame);
+
 }
 
 static bool loadProgramHeader(ElfParser_ProgramHeader ph) {

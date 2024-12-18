@@ -90,10 +90,8 @@ static bool mapFramesFromRegion(seL4_CPtr slot, seL4_Word target_paddr, seL4_Wor
         seL4_CPtr frame_cptr;
 
         retFalseIfFail(retypeWrapper(slot, seL4_X86_4K, 0, &frame_cptr));
-        
-        seL4_Error error = seL4_X86_Page_Map(frame_cptr, seL4_CapInitThreadVSpace, target_vaddr,
-                                             seL4_ReadWrite, seL4_X86_Default_VMAttributes);
-        retErrorIfFail(error == seL4_NoError, "setupGraphics() page map failed!");
+
+        retErrorIfFail(Globals::mapping_context.mapFrame(frame_cptr, target_vaddr), "setupGraphics() page map failed!");
         
         target_vaddr += BIT(seL4_PageBits);
     }
