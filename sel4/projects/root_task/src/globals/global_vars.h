@@ -58,12 +58,6 @@ enum class BootstrapSlots {
     new_cspace_untypeds_start,
     new_cspace_untypeds_end = new_cspace_untypeds_start + GLOBALS_MIN_CHUNKS_SETUP_NEW_CSPACE,
     
-    mapping_caps_start,
-    mapping_caps_end = mapping_caps_start + 16,
-    
-    graphics_caps_start,
-    graphics_caps_end = graphics_caps_start + 1000,
-    
     end
 };
 

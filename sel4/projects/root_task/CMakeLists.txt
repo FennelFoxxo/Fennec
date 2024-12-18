@@ -19,4 +19,4 @@ target_sources(root_task PRIVATE
 
 target_include_directories(root_task PRIVATE src)
 target_link_libraries(root_task sel4muslcsys memory_allocator elf_parser constants)
-target_compile_options(root_task PRIVATE -O0 -g -fno-inline-small-functions -Wall)
+target_compile_options(root_task PRIVATE -Wall)

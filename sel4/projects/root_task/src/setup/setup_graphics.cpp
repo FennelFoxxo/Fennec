@@ -70,11 +70,7 @@ static bool allocatePadding(seL4_CPtr untyped, seL4_Word start_addr, seL4_Word t
     
     for (int i = 63; i != 12; i--) {
         if (diff & BIT(i)) {
-            /*seL4_Error error = seL4_Untyped_Retype( untyped, seL4_UntypedObject, i,
-                                                    seL4_CapInitThreadCNode, 0, 0, current_graphics_cap, 1);*/
             retFalseIfFail(retypeWrapper(untyped, seL4_UntypedObject, i, nullptr));
-            //retErrorIfFail(error == seL4_NoError, "Failed to retype graphics memory!");
-            //retErrorIfFail(advanceGraphicsCap(), "Ran out of graphics caps!");
         }
     }
     return true;
@@ -92,18 +88,12 @@ static bool mapFramesFromRegion(seL4_CPtr slot, seL4_Word target_paddr, seL4_Wor
     
     for (seL4_Word i = 0; i < bytes_to_map/BIT(seL4_PageBits); i++) {
         seL4_CPtr frame_cptr;
-        /*
-        seL4_Error error = seL4_Untyped_Retype( slot, seL4_X86_4K, 0,
-                                                seL4_CapInitThreadCNode, 0, 0, current_graphics_cap, 1);
-        retErrorIfFail(error == seL4_NoError, "setupGraphics() untyped retype failed!");*/
-        
+
         retFalseIfFail(retypeWrapper(slot, seL4_X86_4K, 0, &frame_cptr));
         
         seL4_Error error = seL4_X86_Page_Map(frame_cptr, seL4_CapInitThreadVSpace, target_vaddr,
                                              seL4_ReadWrite, seL4_X86_Default_VMAttributes);
         retErrorIfFail(error == seL4_NoError, "setupGraphics() page map failed!");
-        
-        //retErrorIfFail(advanceGraphicsCap(), "Ran out of graphics caps!");
         
         target_vaddr += BIT(seL4_PageBits);
     }
@@ -139,6 +129,7 @@ bool Setup::setupGraphics() {
             // to map more bytes than are in the region. Use whichever is smaller to avoid going past bounds
             seL4_Word bytes_to_map = MIN(bytes_left_to_map, region_length);
             retFalseIfFail(mapFramesFromRegion(slot, graphics_paddr, graphics_vaddr, bytes_to_map));
+            
             bytes_left_to_map -= bytes_to_map;
             graphics_paddr += bytes_to_map;
             graphics_vaddr += bytes_to_map;

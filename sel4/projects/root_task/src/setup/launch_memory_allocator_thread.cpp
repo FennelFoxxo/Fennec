@@ -198,6 +198,8 @@ static bool loadElf() {
     retFalseIfFail(setupMemoryAllocatorFrames());
     retFalseIfFail(readElfHeader());
     
+    uint64_t total_size = 0;
+    
     for (uint64_t i = 0; i < elf_header.e_phnum; i++) {
         ElfParser_ProgramHeader program_header;
         ElfParser_Error ep_err = elfparser_get_program_header(memory_allocator_elf_start, &elf_header, i, &program_header);
@@ -206,8 +208,10 @@ static bool loadElf() {
         if (program_header.p_type != ELFPARSER_PT_LOAD) continue;
         retErrorIfFail(program_header.p_align >= BIT(GLOBALS_SMALL_CHUNK_BITS), "Memory allocator elf program header has improper alignment!");
         
+        total_size += program_header.p_memsz;
         retFalseIfFail(loadProgramHeader(program_header));
     }
+    printf("Total size: %lu\n", total_size);
     return true;
 }
 
@@ -225,7 +229,6 @@ static bool setupStack() {
     while ((temp_stack_top_initial - stack.getStackTop()) % sizeof(seL4_Word)) {
         stack.push<char>(0);
     }
-    
 
     // Auxiliary vector - null terminator
     stack.push(auxv_t{.a_type = AT_NULL});

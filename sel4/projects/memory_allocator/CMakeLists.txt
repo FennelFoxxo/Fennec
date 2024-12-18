@@ -8,7 +8,6 @@ add_executable(memory_allocator-bin)
 target_sources(memory_allocator-bin PRIVATE src/main.c)
 target_include_directories(memory_allocator-bin PRIVATE "include_private")
 target_compile_options(memory_allocator-bin PRIVATE -O0)
-# target_link_options(memory_allocator-bin PRIVATE -static -nostdlib -e main)
 target_link_options(memory_allocator-bin PRIVATE -static -nostdlib)
 target_link_libraries(memory_allocator-bin
         sel4
