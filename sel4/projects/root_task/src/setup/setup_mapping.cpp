@@ -9,16 +9,16 @@ extern "C" {
 #include <utils/util.h>
 }
 
-static seL4_CPtr current_mapping_cap_cptr;
+static seL4_CPtr next_free_paging_cslot;
 
 static bool getMappingCSlotFunc(seL4_CPtr* cptr) {
-    retErrorIfFail(current_mapping_cap_cptr != GLOBALS_ASSORTED_CSLOT(mapping_caps_end), "Ran out of mapping caps!");
-    *cptr = current_mapping_cap_cptr++;
+    retErrorIfFail(next_free_paging_cslot != GLOBALS_ASSORTED_CSLOT(paging_caps_end), "Ran out of paging caps!");
+    *cptr = next_free_paging_cslot++;
     return true;
 }
 
 bool Setup::setupMapping() {
-    current_mapping_cap_cptr = GLOBALS_ASSORTED_CSLOT(mapping_caps_start);
+    next_free_paging_cslot = GLOBALS_ASSORTED_CSLOT(paging_caps_start);
     
     Globals::mapping_context = MappingContext(seL4_CapInitThreadVSpace, MemTree::getFreeUntyped, MemTree::returnUsedUntyped,
                                               getMappingCSlotFunc, {0, 0, GLOBALS_CSLOT_INDEX(temp_slot), PAGE_CNODE_BITS});

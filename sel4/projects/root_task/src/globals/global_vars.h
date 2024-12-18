@@ -55,13 +55,7 @@ enum class BootstrapSlots {
     mem_tree_temp_slot,     // Temporary slot that MemTree's getFreeUntyped() and returnUsedUntyped() uses
     l5_memory,              // Chunk of memory to be turned into a 5-level cnode structure to hold page-sized untypeds
     croot,                  // New cnode to set as the root task croot
-    
-    // By the time we're ready to set up a new cspace, all the available system memory has started being divided into
-    // page-sized chunks (e.x. 4KB). However, the untypeds are stored deep in a multi-layer CNode tree (L5_memory),
-    // and must be moved into accessible cslots (these cslots here) to be used
-    new_cspace_untypeds_start,
-    new_cspace_untypeds_end = new_cspace_untypeds_start + GLOBALS_MIN_CHUNKS_SETUP_NEW_CSPACE,
-    
+
     end
 };
 
@@ -81,6 +75,10 @@ enum class AssortedSlots {
     bootstrap_memory,
     memory_allocator_chunk,
     
+    // Caps used for storing paging structures (page table, page directory, etc)
+    paging_caps_start,
+    paging_caps_end = paging_caps_start + GLOBALS_MIN_CHUNKS_SETUP_MAPPING,
+    
     thread_temp_frame,  // Temporary page used for copying data into thread address space
 
     memory_allocator_tcb,
@@ -90,11 +88,8 @@ enum class AssortedSlots {
     
     // Room for paging structures to be created for mapping memory allocator in thread vspace
     memory_allocator_paging_objects_start,
-    memory_allocator_paging_objects_end = memory_allocator_paging_objects_start + 16, // This endpoint is inclusive
+    memory_allocator_paging_objects_end = memory_allocator_paging_objects_start + 16 // This endpoint is inclusive
 
-    // Caps used for storing paging structures (page table, page directory, etc)
-    mapping_caps_start,
-    mapping_caps_end = mapping_caps_start + GLOBALS_MIN_CHUNKS_SETUP_MAPPING
 };
 
 extern char memory_allocator_stack[1024] __attribute__((aligned(16)));

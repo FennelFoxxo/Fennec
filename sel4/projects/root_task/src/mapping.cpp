@@ -2,8 +2,6 @@
 
 #include <sel4/sel4_arch/mapping.h>
 
-#include <stdio.h>
-
 MappingContext::MappingContext() {}
 
 MappingContext::MappingContext(seL4_CPtr vspace,
@@ -23,7 +21,7 @@ bool MappingContext::mapPagingStructure(seL4_Word type, seL4_Word vaddr) {
     
     // Get untyped
     if (!get_untyped_func(&untyped_cptr, &untyped_ret_cptr)) return false;
-printf("Retyping\n");
+
     // Retype into object
     seL4_Error error = seL4_Untyped_Retype(untyped_cptr, type, 0,
                                            seL4_CapInitThreadCNode, temp_slot.node_index, temp_slot.node_depth, temp_slot.node_offset, 1);
@@ -37,14 +35,12 @@ printf("Retyping\n");
     // Get free cslot
     seL4_CPtr cslot_cptr;
     if (!get_cslot_func(&cslot_cptr)) return false;
-    printf("Moving\n");
-    printf("%lx\n", cslot_cptr);
+
     // Move retyped object from temp slot to free cslot
     error = seL4_CNode_Move(seL4_CapInitThreadCNode, cslot_cptr, seL4_WordBits,
                             seL4_CapInitThreadCNode, (temp_slot.node_index << temp_slot.node_size_bits) | temp_slot.node_offset, temp_slot.node_depth + temp_slot.node_size_bits);
     if (error != seL4_NoError) return false;
 
-    printf("Moved!\n");
     switch(type) {
         case seL4_X86_PageTableObject:
             error = seL4_X86_PageTable_Map(cslot_cptr, vspace, vaddr, seL4_X86_Default_VMAttributes);
@@ -66,6 +62,7 @@ printf("Retyping\n");
 bool MappingContext::mapFrame(seL4_CPtr frame, seL4_Word vaddr) {
     seL4_Error error = seL4_X86_Page_Map(frame, vspace, vaddr,
                                          seL4_ReadWrite, seL4_X86_Default_VMAttributes);
+
     if (error == seL4_NoError) return true;
 
     // Failed lookup is ok, we just need to map more page objects, but any other return code is an error

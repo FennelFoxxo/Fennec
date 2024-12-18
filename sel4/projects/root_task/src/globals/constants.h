@@ -2,17 +2,11 @@
 
 // Memory region constants
 #define GLOBALS_MAX_USABLE_MEMORY_REGIONS 100
-#define GLOBALS_LARGE_CHUNK_BITS 20
-#define GLOBALS_SMALL_CHUNK_BITS 12 // Page size
 
 // Required minimums
 #define GLOBALS_MIN_CHUNKS_SETUP_NEW_CSPACE 2
 #define GLOBALS_MIN_CHUNKS_SETUP_MAPPING 16
 #define GLOBALS_MIN_CHUNKS_SETUP_GRAPHICS 16
-#define GLOBALS_MIN_LARGE_CHUNKS 10
-
-// Log2 of how many cslots can fit in a small chunk
-#define GLOBALS_SMALL_CNODE_BITS (GLOBALS_SMALL_CHUNK_BITS - seL4_SlotBits)
 
 // Log2 of how many cslots can fit in a large chunk
 #define GLOBALS_LARGE_CNODE_BITS (GLOBALS_LARGE_CHUNK_BITS - seL4_SlotBits)
@@ -24,9 +18,6 @@
 // Should be <= PAGE_CNODE_BITS
 #define MEMORY_CHUNKING_BATCH_SIZE PAGE_CNODE_BITS
 
-// Log2 of how many cslots can fit in the memory allocator frame table, which holds the physical memory needed to start the memory allocator thread
-// Should be able to map memory allocator elf file
-#define GLOBALS_MEMORY_ALLOCATOR_FRAMES_CNODE_BITS (GLOBALS_LARGE_CHUNK_BITS - GLOBALS_SMALL_CHUNK_BITS)
 
 // CSlot locations
 #define THREAD_CNODE_SLOT 1 // Index of where cspace root should be placed in spawned thread's cnode
