@@ -17,9 +17,21 @@ extern "C" {
 }
 
 static ElfParser_Header elf_header;
-static seL4_Word current_frame = 0;
+
+// Number of untypeds that have been retyped into page-sized frames.
+static seL4_Word num_frames = 0;
+
+// Number of frames that have been mapped into the vspace
+// Also serves as the index of the next unmapped frame
+static seL4_Word num_mapped_frames = 0;
+
+// Keep track of free cslots for paging objects (page table, page directory, etc)
 static seL4_Word next_free_paging_cslot = GLOBALS_ASSORTED_CSLOT(memory_allocator_paging_objects_start);
+
+// Keep track of how many bytes we've pushed into the thread's stack
 static seL4_Word stack_bytes_pushed = 0;
+
+// Holds cslots returned by getUntyped()
 static seL4_CPtr untyped_cptr, return_cptr;
 
 
@@ -42,6 +54,45 @@ static bool getUntyped() {
 static bool returnUntyped() {
     return MemTree::returnUsedUntyped(return_cptr);
 }
+
+static bool retypeNewFrameIfNeeded() {
+    // No need to retype a new frame if we have enough
+    if (num_frames > num_mapped_frames) return true;
+    
+    // Make sure we have space for a frame
+    retErrorIfFail(num_frames < BIT(PAGE_CNODE_BITS), "Ran out of space for frames while loading memory allocator!");
+    
+    retFalseIfFail(getUntyped()); // Get an untyped to use
+    
+    // Retype into page frame
+    seL4_Error error = seL4_Untyped_Retype(untyped_cptr, seL4_X86_4K, 0,
+                                            seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(memory_allocator_frames), PAGE_CNODE_BITS, num_frames, 1);
+    retErrorIfFail(error == seL4_NoError, "Failed to retype into memory allocator frame");
+    
+    retFalseIfFail(returnUntyped()); // Return the untyped
+    
+    num_frames++;
+    
+    return true;
+}
+
+static bool mapCurrentFrameInThisVSpace(seL4_Word vaddr) {
+    retypeNewFrameIfNeeded();
+    return Globals::mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | num_mapped_frames++, vaddr);
+}
+
+static bool mapCurrentFrameInDestVSpace(seL4_Word vaddr) {
+    retypeNewFrameIfNeeded();
+    return dest_vspace_mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | num_mapped_frames++, vaddr);
+}
+
+static bool unmapCurrentFrame() {
+    num_mapped_frames--;
+
+    return Globals::mapping_context.unmapFrame(GLOBALS_CSLOT(memory_allocator_frames) | num_mapped_frames);
+}
+
+
 
 static bool createVSpace() {
     retFalseIfFail(getUntyped());
@@ -93,37 +144,7 @@ static bool setupMemoryAllocatorFrames() {
                               seL4_WordBits - 2 * PAGE_CNODE_BITS); // Set guard so frames are accessed at depth of seL4_WordBits
     retErrorIfFail(error == seL4_NoError, "Failed to mutate memory allocator frames cnode");
 
-    
-    // Break chunk into 4k frames
-    for (seL4_Word i = 0; i < BIT(PAGE_CNODE_BITS); i++) {
-        retFalseIfFail(getUntyped());
-        
-        error = seL4_Untyped_Retype(untyped_cptr, seL4_X86_4K, 0,
-                                seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(memory_allocator_frames), PAGE_CNODE_BITS, i, 1);
-        retErrorIfFail(error == seL4_NoError, "Failed to retype into memory allocator frames");
-        
-        retFalseIfFail(returnUntyped());
-    }
-
     return true;
-}
-
-static bool mapCurrentFrame(seL4_CPtr vspace, seL4_Word addr_to_map_at) {
-    // Make sure we have a free frame
-    retErrorIfFail(current_frame < BIT(PAGE_CNODE_BITS), "Ran out of frames while loading memory allocator!");
-    
-    if (vspace == seL4_CapInitThreadVSpace) {
-        return Globals::mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | current_frame++, addr_to_map_at);
-    }
-
-    return dest_vspace_mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | current_frame++, addr_to_map_at);
-}
-
-static bool unmapCurrentFrame() {
-    current_frame--;
-
-    return Globals::mapping_context.unmapFrame(GLOBALS_CSLOT(memory_allocator_frames) | current_frame);
-
 }
 
 static bool loadProgramHeader(ElfParser_ProgramHeader ph) {
@@ -135,7 +156,7 @@ static bool loadProgramHeader(ElfParser_ProgramHeader ph) {
     seL4_Word dest_vaddr = ph.p_vaddr - offset;
     while (bytes_left > 0) {
         // First map frame into our address space to do the copying
-        retFalseIfFail(mapCurrentFrame(seL4_CapInitThreadVSpace, TEMP_FRAME_VADDR));
+        retFalseIfFail(mapCurrentFrameInThisVSpace(TEMP_FRAME_VADDR));
         
         bytes_left = elfparser_copy_segment(memory_allocator_elf_start, &elf_header, ph.index,
                                             (void*)(TEMP_FRAME_VADDR + offset), total_bytes - bytes_left, BIT(seL4_PageBits) - offset);
@@ -145,10 +166,9 @@ static bool loadProgramHeader(ElfParser_ProgramHeader ph) {
         offset = 0;
         
         // Remap frame into thread address space
-
         retFalseIfFail(unmapCurrentFrame());
-        retFalseIfFail(mapCurrentFrame(GLOBALS_ASSORTED_CSLOT(memory_allocator_vspace), dest_vaddr));
-        printf("Mapped at %lx\n", dest_vaddr);
+        retFalseIfFail(mapCurrentFrameInDestVSpace(dest_vaddr));
+
         dest_vaddr += BIT(seL4_PageBits);
         
     }
@@ -178,7 +198,7 @@ static bool loadElf() {
 }
 
 static bool setupStack() {
-    retFalseIfFail(mapCurrentFrame(seL4_CapInitThreadVSpace, TEMP_FRAME_VADDR));
+    retFalseIfFail(mapCurrentFrameInThisVSpace(TEMP_FRAME_VADDR));
     
     // Create stack object at top of page
     long long unsigned temp_stack_top_initial = TEMP_FRAME_VADDR + BIT(seL4_PageBits);
@@ -219,15 +239,16 @@ static bool setupStack() {
     retFalseIfFail(unmapCurrentFrame());
     
     // The top of the stack is at the end of the page, so we actually need to map the page under the stack top address
-    retErrorIfFail(mapCurrentFrame(GLOBALS_ASSORTED_CSLOT(memory_allocator_vspace), THREAD_STACK_TOP_VADDR - BIT(seL4_PageBits)), "Failed to map memory allocator stack!");
+    retErrorIfFail(mapCurrentFrameInDestVSpace(THREAD_STACK_TOP_VADDR - BIT(seL4_PageBits)), "Failed to map memory allocator stack!");
 
     return true;
 }
 
 static bool createIPCBuffer() {
-    seL4_Word ipc_frame = current_frame;
+    // We need to pass the cap to the IPC frame to the memory allocator thread, so we need to save the location of the frame we're about to map
+    seL4_Word ipc_frame = num_mapped_frames;
     
-    retErrorIfFail(mapCurrentFrame(GLOBALS_ASSORTED_CSLOT(memory_allocator_vspace), THREAD_IPC_BUFFER_VADDR), "Failed to map memory allocator IPC buffer!");
+    retErrorIfFail(mapCurrentFrameInDestVSpace(THREAD_IPC_BUFFER_VADDR), "Failed to map memory allocator IPC buffer!");
     
     seL4_Error error = seL4_CNode_Move(seL4_CapInitThreadCNode, GLOBALS_ASSORTED_CSLOT(memory_allocator_ipc_buffer), seL4_WordBits,
                                        seL4_CapInitThreadCNode, GLOBALS_CSLOT(memory_allocator_frames) | ipc_frame, seL4_WordBits);
