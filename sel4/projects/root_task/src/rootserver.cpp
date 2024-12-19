@@ -16,11 +16,6 @@ void halt(const char* halt_message = nullptr) {
 	seL4_TCB_Suspend(seL4_CapInitThreadTCB);
 }
 
-
-bool foo(seL4_CPtr* a, seL4_CPtr* b) {return true;}
-
-MappingContext m(3, nullptr, nullptr, nullptr, {});
-
 int main(void) {
 	printf("\n\n--- ROOTSERVER START ---\n\n");
     
