@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#define ERROR_MESSAGE_BUFFER_SIZE 300
+#define ERROR_MESSAGE_BUFFER_SIZE 1000
 
 static void defaultAssertFailCallback(const char* err) {
     printf("%s\n", err);
