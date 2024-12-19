@@ -4,8 +4,6 @@ namespace Globals {
 
 seL4_BootInfo* boot_info = nullptr;
 
-const char* error_msg;
-
 seL4_Word num_empty_slots = 0;
 seL4_Word num_memory_chunks = 0;
 

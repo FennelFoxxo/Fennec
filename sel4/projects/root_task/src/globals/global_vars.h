@@ -15,9 +15,6 @@ namespace Globals {
 // Boot info permanent pointer
 extern seL4_BootInfo* boot_info;
 
-// Error message pointer
-extern const char* error_msg;
-
 // Info about available memory
 extern seL4_Word num_empty_slots;
 extern seL4_Word num_memory_chunks; // Total number of usable memory chunks

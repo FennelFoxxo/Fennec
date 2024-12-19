@@ -35,170 +35,155 @@ static seL4_Word stack_bytes_pushed = 0;
 static seL4_CPtr untyped_cptr, return_cptr;
 
 
-static bool getMappingCSlotFunc(seL4_CPtr* cptr) {
-    retErrorIfFail(next_free_paging_cslot != GLOBALS_ASSORTED_CSLOT(memory_allocator_paging_objects_end), "Ran out of mapping caps!");
+static void getMappingCSlotFunc(seL4_CPtr* cptr) {
+    assert(next_free_paging_cslot != GLOBALS_ASSORTED_CSLOT(memory_allocator_paging_objects_end));
     *cptr = next_free_paging_cslot++;
-    return true;
 }
-
 
 static MappingContext dest_vspace_mapping_context(
     GLOBALS_ASSORTED_CSLOT(memory_allocator_vspace), MemTree::getFreeUntyped, MemTree::returnUsedUntyped,
     getMappingCSlotFunc, {0, 0, GLOBALS_CSLOT_INDEX(temp_slot), PAGE_CNODE_BITS}
 );
 
-static bool getUntyped() {
-    return MemTree::getFreeUntyped(&untyped_cptr, &return_cptr);
+
+static void getUntyped() {
+    MemTree::getFreeUntyped(&untyped_cptr, &return_cptr);
 }
 
-static bool returnUntyped() {
-    return MemTree::returnUsedUntyped(return_cptr);
+static void returnUntyped() {
+    MemTree::returnUsedUntyped(return_cptr);
 }
 
-static bool retypeNewFrameIfNeeded() {
+static void retypeNewFrameIfNeeded() {
     // No need to retype a new frame if we have enough
-    if (num_frames > num_mapped_frames) return true;
+    if (num_frames > num_mapped_frames) return;
     
     // Make sure we have space for a frame
-    retErrorIfFail(num_frames < BIT(PAGE_CNODE_BITS), "Ran out of space for frames while loading memory allocator!");
+    assert(num_frames < BIT(PAGE_CNODE_BITS));
     
-    retFalseIfFail(getUntyped()); // Get an untyped to use
+    getUntyped(); // Get an untyped to use
     
     // Retype into page frame
     seL4_Error error = seL4_Untyped_Retype(untyped_cptr, seL4_X86_4K, 0,
                                             seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(memory_allocator_frames), PAGE_CNODE_BITS, num_frames, 1);
-    retErrorIfFail(error == seL4_NoError, "Failed to retype into memory allocator frame");
+    assert(error == seL4_NoError, error);
     
-    retFalseIfFail(returnUntyped()); // Return the untyped
+    returnUntyped(); // Return the untyped
     
     num_frames++;
-    
-    return true;
 }
 
-static bool mapCurrentFrameInThisVSpace(seL4_Word vaddr) {
+static void mapCurrentFrameInThisVSpace(seL4_Word vaddr) {
     retypeNewFrameIfNeeded();
-    return Globals::mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | num_mapped_frames++, vaddr);
+    assert(Globals::mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | num_mapped_frames++, vaddr));
 }
 
-static bool mapCurrentFrameInDestVSpace(seL4_Word vaddr) {
+static void mapCurrentFrameInDestVSpace(seL4_Word vaddr) {
     retypeNewFrameIfNeeded();
-    return dest_vspace_mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | num_mapped_frames++, vaddr);
+    assert(dest_vspace_mapping_context.mapFrame(GLOBALS_CSLOT(memory_allocator_frames) | num_mapped_frames++, vaddr));
 }
 
-static bool unmapCurrentFrame() {
+static void unmapCurrentFrame() {
     num_mapped_frames--;
-
-    return Globals::mapping_context.unmapFrame(GLOBALS_CSLOT(memory_allocator_frames) | num_mapped_frames);
+    assert(Globals::mapping_context.unmapFrame(GLOBALS_CSLOT(memory_allocator_frames) | num_mapped_frames));
 }
 
 
 
-static bool createVSpace() {
-    retFalseIfFail(getUntyped());
+static void createVSpace() {
+    getUntyped();
     
     seL4_Error error = seL4_Untyped_Retype(untyped_cptr, seL4_X64_PML4Object, 0,
                                            seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(assorted_caps), PAGE_CNODE_BITS,
                                            GLOBALS_ASSORTED_CSLOT_INDEX(memory_allocator_vspace), 1);
-	retErrorIfFail(error == seL4_NoError, "Failed to retype into memory allocator vspace!");
+	assert(error == seL4_NoError, error);
     
-    retFalseIfFail(returnUntyped());
+    returnUntyped();
     
     error = seL4_X86_ASIDPool_Assign(seL4_CapInitThreadASIDPool, GLOBALS_ASSORTED_CSLOT(memory_allocator_vspace));
-    retErrorIfFail(error == seL4_NoError, "Failed to assign to ASID pool during thread setup!");
-    
-    return true;
+    assert(error == seL4_NoError, error);
 }
 
-static bool createCSpace() {
-    retFalseIfFail(getUntyped());
+static void createCSpace() {
+    getUntyped();
     
     seL4_Error error = seL4_Untyped_Retype(untyped_cptr, seL4_CapTableObject, PAGE_CNODE_BITS,
                                            seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(assorted_caps), PAGE_CNODE_BITS,
                                            GLOBALS_ASSORTED_CSLOT_INDEX(memory_allocator_croot), 1);
-	retErrorIfFail(error == seL4_NoError, "Failed to retype into memory allocator cspace!");
+	assert(error == seL4_NoError, error);
     
-    retFalseIfFail(returnUntyped());
-
-    return true;
+    returnUntyped();
 }
 
-static bool readElfHeader() {
+static void readElfHeader() {
     ElfParser_Error ep_err = elfparser_get_header(memory_allocator_elf_start, memory_allocator_elf_size, &elf_header);
-    retErrorIfFail(ep_err == ELFPARSER_NOERROR, "Error reading memory allocator elf header!");
-    return true;
+    assert(ep_err == ELFPARSER_NOERROR);
 }
 
-static bool setupMemoryAllocatorFrames() {
+static void setupMemoryAllocatorFrames() {
     // Create CNode to hold frame caps
-    retFalseIfFail(getUntyped());
+    getUntyped();
     
     seL4_Error error = seL4_Untyped_Retype(untyped_cptr, seL4_CapTableObject, PAGE_CNODE_BITS,
                                            seL4_CapInitThreadCNode, 0, 0, GLOBALS_CSLOT_INDEX(temp_slot), 1);
-    retErrorIfFail(error == seL4_NoError, "Failed to create memory allocator frames cnode");
+    assert(error == seL4_NoError, error);
     
-    retFalseIfFail(returnUntyped());
+    returnUntyped();
     
     error = seL4_CNode_Mutate(seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(memory_allocator_frames), PAGE_CNODE_BITS,
                               seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(temp_slot), PAGE_CNODE_BITS,
                               seL4_WordBits - 2 * PAGE_CNODE_BITS); // Set guard so frames are accessed at depth of seL4_WordBits
-    retErrorIfFail(error == seL4_NoError, "Failed to mutate memory allocator frames cnode");
-
-    return true;
+    assert(error == seL4_NoError, error);
 }
 
-static bool loadProgramHeader(ElfParser_ProgramHeader ph) {
+static void loadProgramHeader(ElfParser_ProgramHeader ph) {
     uint64_t total_bytes = elfparser_copy_segment(memory_allocator_elf_start, &elf_header, ph.index, NULL, 0, 0);
-    retErrorIfFail(total_bytes != ELFPARSER_INVALID, "Error loading memory allocator elf program header!");
+    assert(total_bytes != ELFPARSER_INVALID);
     
     uint64_t offset = ph.p_vaddr % BIT(seL4_PageBits);
     uint64_t bytes_left = total_bytes;
     seL4_Word dest_vaddr = ph.p_vaddr - offset;
     while (bytes_left > 0) {
         // First map frame into our address space to do the copying
-        retFalseIfFail(mapCurrentFrameInThisVSpace(TEMP_FRAME_VADDR));
+        mapCurrentFrameInThisVSpace(TEMP_FRAME_VADDR);
         
         bytes_left = elfparser_copy_segment(memory_allocator_elf_start, &elf_header, ph.index,
                                             (void*)(TEMP_FRAME_VADDR + offset), total_bytes - bytes_left, BIT(seL4_PageBits) - offset);
-        retErrorIfFail(bytes_left != ELFPARSER_INVALID, "Error loading memory allocator elf program header!");
+        assert(bytes_left != ELFPARSER_INVALID);
         
         // After offset into initial frame is accounted for, we don't need to worry about it anymore
         offset = 0;
         
         // Remap frame into thread address space
-        retFalseIfFail(unmapCurrentFrame());
-        retFalseIfFail(mapCurrentFrameInDestVSpace(dest_vaddr));
+        unmapCurrentFrame();
+        mapCurrentFrameInDestVSpace(dest_vaddr);
 
         dest_vaddr += BIT(seL4_PageBits);
-        
     }
-
-    return true;
 }
 
-static bool loadElf() {
-    retFalseIfFail(setupMemoryAllocatorFrames());
-    retFalseIfFail(readElfHeader());
+static void loadElf() {
+    setupMemoryAllocatorFrames();
+    readElfHeader();
     
     uint64_t total_size = 0;
     
     for (uint64_t i = 0; i < elf_header.e_phnum; i++) {
         ElfParser_ProgramHeader program_header;
         ElfParser_Error ep_err = elfparser_get_program_header(memory_allocator_elf_start, &elf_header, i, &program_header);
-        retErrorIfFail(ep_err == ELFPARSER_NOERROR, "Error reading memory allocator elf program header!");
+        assert(ep_err == ELFPARSER_NOERROR);
 
         if (program_header.p_type != ELFPARSER_PT_LOAD) continue;
-        retErrorIfFail(program_header.p_align >= BIT(seL4_PageBits), "Memory allocator elf program header has improper alignment!");
+        assert(program_header.p_align >= BIT(seL4_PageBits));
         
         total_size += program_header.p_memsz;
-        retFalseIfFail(loadProgramHeader(program_header));
+        loadProgramHeader(program_header);
     }
     printf("Total size: %lu\n", total_size);
-    return true;
 }
 
-static bool setupStack() {
-    retFalseIfFail(mapCurrentFrameInThisVSpace(TEMP_FRAME_VADDR));
+static void setupStack() {
+    mapCurrentFrameInThisVSpace(TEMP_FRAME_VADDR);
     
     // Create stack object at top of page
     long long unsigned temp_stack_top_initial = TEMP_FRAME_VADDR + BIT(seL4_PageBits);
@@ -236,98 +221,84 @@ static bool setupStack() {
     
     stack_bytes_pushed = temp_stack_top_initial - stack.getStackTop();
     
-    retFalseIfFail(unmapCurrentFrame());
+    unmapCurrentFrame();
     
     // The top of the stack is at the end of the page, so we actually need to map the page under the stack top address
-    retErrorIfFail(mapCurrentFrameInDestVSpace(THREAD_STACK_TOP_VADDR - BIT(seL4_PageBits)), "Failed to map memory allocator stack!");
-
-    return true;
+    mapCurrentFrameInDestVSpace(THREAD_STACK_TOP_VADDR - BIT(seL4_PageBits));
 }
 
-static bool createIPCBuffer() {
+static void createIPCBuffer() {
     // We need to pass the cap to the IPC frame to the memory allocator thread, so we need to save the location of the frame we're about to map
     seL4_Word ipc_frame = num_mapped_frames;
     
-    retErrorIfFail(mapCurrentFrameInDestVSpace(THREAD_IPC_BUFFER_VADDR), "Failed to map memory allocator IPC buffer!");
+    mapCurrentFrameInDestVSpace(THREAD_IPC_BUFFER_VADDR);
     
     seL4_Error error = seL4_CNode_Move(seL4_CapInitThreadCNode, GLOBALS_ASSORTED_CSLOT(memory_allocator_ipc_buffer), seL4_WordBits,
                                        seL4_CapInitThreadCNode, GLOBALS_CSLOT(memory_allocator_frames) | ipc_frame, seL4_WordBits);
-    retErrorIfFail(error == seL4_NoError, "Failed to copy memory allocator IPC buffer frame!");
-    
-    return true;
+    assert(error == seL4_NoError, error);
 }
 
-static bool setupTCB() {
-    retFalseIfFail(getUntyped());
+static void setupTCB() {
+    getUntyped();
     
     seL4_Error error = seL4_Untyped_Retype(untyped_cptr, seL4_TCBObject, seL4_TCBBits,
                                            seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(assorted_caps), PAGE_CNODE_BITS,
                                            GLOBALS_ASSORTED_CSLOT_INDEX(memory_allocator_tcb), 1);
-	retErrorIfFail(error == seL4_NoError, "Failed to retype into memory allocator TCB!");
+	assert(error == seL4_NoError, error);
     
-    retFalseIfFail(returnUntyped());
+    returnUntyped();
 
     error = seL4_TCB_Configure(GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), seL4_CapNull,
                                GLOBALS_ASSORTED_CSLOT(memory_allocator_croot), seL4_WordBits - PAGE_CNODE_BITS,
                                GLOBALS_ASSORTED_CSLOT(memory_allocator_vspace), 0,
                                THREAD_IPC_BUFFER_VADDR, GLOBALS_ASSORTED_CSLOT(memory_allocator_ipc_buffer));
-    retErrorIfFail(error == seL4_NoError, "Failed to configure memory allocator TCB!");
+    assert(error == seL4_NoError, error);
     
     error = seL4_TCB_SetPriority(GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), seL4_CapInitThreadTCB, MEMORY_ALLOCATOR_PRIORITY);
-	retErrorIfFail(error == seL4_NoError, "Failed to set priority during thread setup!");
+	assert(error == seL4_NoError, error);
     
     error = seL4_TCB_SetMCPriority(GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), seL4_CapInitThreadTCB, MEMORY_ALLOCATOR_PRIORITY);
-	retErrorIfFail(error == seL4_NoError, "Failed to set maximum controlled priority during thread setup!");
+	assert(error == seL4_NoError, error);
     
     seL4_DebugNameThread(GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), "Memory Allocator");
-
-    return true;
 }
 
-static bool setupRegisters() {
+static void setupRegisters() {
     seL4_UserContext regs;
     seL4_Error error = seL4_TCB_ReadRegisters(GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), 0, 0, sizeof(regs)/sizeof(seL4_Word), &regs);
-	retErrorIfFail(error == seL4_NoError, "Failed to read memory allocator registers!");
+	assert(error == seL4_NoError, error);
 
 	regs.rip = (seL4_Word)elf_header.e_entry;
 	regs.rsp = THREAD_STACK_TOP_VADDR - stack_bytes_pushed; // Set stack pointer to top of stack
 
 	error = seL4_TCB_WriteRegisters(GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), 0, 0, sizeof(regs)/sizeof(seL4_Word), &regs);
-	retErrorIfFail(error == seL4_NoError, "Failed to write memory allocator registers!");
-    
-    return true;
+	assert(error == seL4_NoError, error);
 }
 
-static bool setupCSlots() {
+static void setupCSlots() {
     seL4_Error error = seL4_CNode_Copy(GLOBALS_ASSORTED_CSLOT(memory_allocator_croot), 0, PAGE_CNODE_BITS,
                                        seL4_CapInitThreadCNode, GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), seL4_WordBits, seL4_AllRights);
-    retErrorIfFail(error == seL4_NoError, "Failed to move memory allocator TCB while setting up CSlots!");
-    
-    return true;
+    assert(error == seL4_NoError, error);
 }
 
-static bool setupMemoryAllocatorThread() {
-    retFalseIfFail(createVSpace());
-    retFalseIfFail(createCSpace());
-    retFalseIfFail(loadElf());
-    retFalseIfFail(setupStack());
-    retFalseIfFail(createIPCBuffer());
-    retFalseIfFail(setupTCB());
-    retFalseIfFail(setupRegisters());
-    retFalseIfFail(setupCSlots());
-    
-    return true;
+static void setupMemoryAllocatorThread() {
+    createVSpace();
+    createCSpace();
+    loadElf();
+    setupStack();
+    createIPCBuffer();
+    setupTCB();
+    setupRegisters();
+    setupCSlots();
 }
 
-static bool resumeMemoryAllocatorThread() {
+static void resumeMemoryAllocatorThread() {
     seL4_Error error = seL4_TCB_Resume(GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb));
-    retErrorIfFail(error == seL4_NoError, "Failed to resume memory allocator thread!");
-    return true;
+    assert(error == seL4_NoError, error);
 }
 
-bool Setup::launchMemoryAllocatorThread() {
-    retFalseIfFail(setupMemoryAllocatorThread());
+void Setup::launchMemoryAllocatorThread() {
+    setupMemoryAllocatorThread();
     seL4_DebugDumpScheduler();
-    retFalseIfFail(resumeMemoryAllocatorThread());
-    return true;
+    resumeMemoryAllocatorThread();
 }

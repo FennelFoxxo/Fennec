@@ -14,11 +14,4 @@
 #define GLOBALS_LARGE_CHUNK_SIZE BIT(GLOBALS_LARGE_CHUNK_BITS)
 #define GLOBALS_SMALL_CHUNK_SIZE BIT(GLOBALS_SMALL_CHUNK_BITS)
 
-#define GLOBALS_GET_ERROR() (Globals::error_msg)
-#define GLOBALS_SET_ERROR(msg) (Globals::error_msg = msg)
-
 #define _Static_assert static_assert // Needed for sel4runtime to compile
-
-#define retFalseIfFail(f) if (!(f)) return false;
-#define retErrorIfFail(f, msg) if (!(f)) {GLOBALS_SET_ERROR(msg); return false;}
-#define retIfFail(f) if (!(f)) return;

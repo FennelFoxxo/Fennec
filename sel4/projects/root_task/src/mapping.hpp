@@ -24,9 +24,9 @@ extern "C" {
 // are moved to a free cslot. The location should be placed in the TempSlot object
 
 class MappingContext {
-    typedef bool (*GetUntypedFunc)(seL4_CPtr* cptr, seL4_CPtr* ret_cptr);
-    typedef bool (*RetUntypedFunc)(seL4_CPtr ret_cptr);
-    typedef bool (*GetCSlotFunc)(seL4_CPtr* cptr);
+    typedef void (*GetUntypedFunc)(seL4_CPtr* cptr, seL4_CPtr* ret_cptr);
+    typedef void (*RetUntypedFunc)(seL4_CPtr ret_cptr);
+    typedef void (*GetCSlotFunc)(seL4_CPtr* cptr);
     
     struct TempSlot {
         seL4_Word node_index;

@@ -1,8 +1,8 @@
 #include "setup.h"
 
 #include "globals/globals.h"
-
 #include "graphics.hpp"
+#include "assert.h"
 
 extern "C" {
 #include <sel4/sel4.h>
@@ -10,10 +10,20 @@ extern "C" {
 #include <utils/util.h>
 }
 
-static seL4_CPtr current_region = 0;
-static seL4_Word bytes_left_in_region = 0;
-static seL4_Word total_chunks = 0;
-static seL4_Word processed_chunks = 0;
+// CPtr of untyped (obtained through bootinfo) that we're currently processing
+static seL4_CPtr current_region;
+
+// Number of bytes left in the region we're currently processing
+static seL4_Word bytes_left_in_region;
+
+// Total number of chunks expected to be processed
+static seL4_Word total_chunks;
+
+// Number of chunks processed so far
+static seL4_Word processed_chunks;
+
+// Have we chunked every region or used up all the cslots?
+static bool done_processing;
 
 static bool is_new_cpsace_setup = false;
 static bool is_mapping_setup = false;
@@ -37,27 +47,23 @@ static void onRetypeSuccess() {
 }
 
 // Called when a new usable chunk is available
-// Returns true if no errors occur during this function
-static bool onNewUsableChunkSuccess() {
-    
+static void onNewUsableChunkSuccess() {
     seL4_Word num_free_chunks = Globals::num_memory_chunks - Globals::memory_chunks_next_available;
     
     if (num_free_chunks >= GLOBALS_MIN_CHUNKS_SETUP_NEW_CSPACE && !is_new_cpsace_setup) {
-        retFalseIfFail(Setup::setupNewCSpace());
+        Setup::setupNewCSpace();
         is_new_cpsace_setup = true;
     }
     
     if (num_free_chunks >= GLOBALS_MIN_CHUNKS_SETUP_MAPPING && is_new_cpsace_setup && !is_mapping_setup) {
-        retFalseIfFail(Setup::setupMapping());
+        Setup::setupMapping();
         is_mapping_setup = true;
     }
     
     if (num_free_chunks >= GLOBALS_MIN_CHUNKS_SETUP_GRAPHICS && is_mapping_setup && !is_graphics_setup) {
-        retFalseIfFail(Setup::setupGraphics());
+        Setup::setupGraphics();
         is_graphics_setup = true;
     }
-    
-    return true;
 }
 
 
@@ -93,13 +99,13 @@ static bool isAcceptableRegion(seL4_CPtr region) {
 }
 
 static seL4_Word calcTotalChunks() {
-    seL4_Word total_chunks = 0;
+    seL4_Word num_chunks = 0;
     for (seL4_CPtr region = Globals::boot_info->untyped.start; region != Globals::boot_info->untyped.end; region++) {
         if (isAcceptableRegion(region)) {
-            total_chunks += BIT(getRegionDesc(region)->sizeBits - seL4_PageBits);
+            num_chunks += BIT(getRegionDesc(region)->sizeBits - seL4_PageBits);
         }
     }
-    return total_chunks;
+    return num_chunks;
 }
 
 // Returns CPtr of first acceptable region after start (inclusive) - returns 0 if none found
@@ -144,17 +150,14 @@ static void setTableAllocationFlags() {
     Globals::num_memory_chunks -= BIT(MEMORY_CHUNKING_BATCH_SIZE);
 }
 
-// Returns true if allocation succeeded.
-// Allocation could fail for two reasons - either retype failed (sel4_error != seL4_NoError), or we're out of memory
-// If allocation failed but error is 0, then we've chunked all available memory
-static bool retypeWrapper(seL4_CNode root, seL4_Word index, seL4_Word depth, seL4_Word offset, seL4_Word type, seL4_Error* sel4_error, seL4_Word num_obj) {
+static void retypeWrapper(seL4_CNode root, seL4_Word index, seL4_Word depth, seL4_Word offset, seL4_Word type, seL4_Word num_obj) {
     while (num_obj != 0) {
+        // If this region is all empty, then start search from the next region
         if (bytes_left_in_region == 0) {
-            // This region is all empty, start search from the next region
             current_region = findAcceptableRegion(current_region+1);
             if (current_region == 0) { // No acceptable region found, we've processed all memory
-                *sel4_error = seL4_NoError; // Indicate that allocation failure was not due to an seL4 retype() error
-                return false;
+                done_processing = true;
+                return;
             }
             bytes_left_in_region = BIT(getRegionDesc(current_region)->sizeBits);
         }
@@ -165,10 +168,10 @@ static bool retypeWrapper(seL4_CNode root, seL4_Word index, seL4_Word depth, seL
         // The region might not be big enough to retype all the requested objects at once
         seL4_Word num_obj_capped = MIN(num_obj, bytes_left_in_region / BIT(size_bits));
         
-        *sel4_error = seL4_Untyped_Retype(current_region, type, size_bits,
-                                          root, index, depth, offset, num_obj_capped);
+        seL4_Error error = seL4_Untyped_Retype(current_region, type, size_bits,
+                                               root, index, depth, offset, num_obj_capped);
                                           
-        retErrorIfFail(*sel4_error == seL4_NoError, "Failed to retype while chunking memory!");
+        assert(error == seL4_NoError, error);
         
         // No matter what size_bits is, the total object size is the same (1 page)
         bytes_left_in_region -= num_obj_capped * BIT(seL4_PageBits);
@@ -179,48 +182,48 @@ static bool retypeWrapper(seL4_CNode root, seL4_Word index, seL4_Word depth, seL
 
         onRetypeSuccess();
     }
-    return true;
 }
 
-static bool retypeIntoCTable(seL4_CNode root, seL4_Word index, seL4_Word depth, seL4_Word offset, seL4_Error* sel4_error) {
-    return retypeWrapper(root, index, depth, offset, seL4_CapTableObject, sel4_error, 1);
+static void retypeIntoCTable(seL4_CNode root, seL4_Word index, seL4_Word depth, seL4_Word offset) {
+    retypeWrapper(root, index, depth, offset, seL4_CapTableObject, 1);
 }
 
-static bool retypeIntoFrames(seL4_CNode root, seL4_Word index, seL4_Word depth, seL4_Word offset, seL4_Error* sel4_error, seL4_Word num_obj) {
+static void retypeIntoFrames(seL4_CNode root, seL4_Word index, seL4_Word depth, seL4_Word offset, seL4_Word num_obj) {
     // Increment memory chunks counter since we're creating a new chunk here
     Globals::num_memory_chunks += num_obj;
-    return retypeWrapper(root, index, depth, offset, seL4_UntypedObject, sel4_error, num_obj);
+    retypeWrapper(root, index, depth, offset, seL4_UntypedObject, num_obj);
 }
 
-static bool allocateL5(seL4_Error* sel4_error) {
+static void allocateL5() {
     // There can only ever be one L5 table, which is allocated at the start.
     // If we've already allocated one (we can check this by seeing if chunks have already started being allocated),
     // Then we have no more room to store frames and we're all done!
     if (Globals::num_memory_chunks != 0) {
-        return false;
+        done_processing = true;
+        return;
     }
-    return retypeIntoCTable(seL4_CapInitThreadCNode, 0, 0, GLOBALS_BOOTSTRAP_CSLOT(l5_memory), sel4_error);
+    retypeIntoCTable(seL4_CapInitThreadCNode, 0, 0, GLOBALS_BOOTSTRAP_CSLOT(l5_memory));
 }
 
-static bool allocateL4(seL4_Error* sel4_error) {
+static void allocateL4() {
     if (allocate_new_L5) {
-        if (!allocateL5(sel4_error)) return false;
+        allocateL5();
         allocate_new_L5 = false;
     }
-    return retypeIntoCTable(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), 0, 0, calcL5Index(), sel4_error);
+    retypeIntoCTable(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), 0, 0, calcL5Index());
 }
 
-static bool allocateL3(seL4_Error* sel4_error) {
+static void allocateL3() {
     if (allocate_new_L4) {
-        if (!allocateL4(sel4_error)) return false;
+        allocateL4();
         allocate_new_L4 = false;
     }
-    return retypeIntoCTable(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), calcL5Index(), PAGE_CNODE_BITS, calcL4Index(), sel4_error);
+    retypeIntoCTable(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), calcL5Index(), PAGE_CNODE_BITS, calcL4Index());
 }
 
-static bool allocateL2(seL4_Error* sel4_error) {
+static void allocateL2() {
     if (allocate_new_L3) {
-        if (!allocateL3(sel4_error)) return false;
+        allocateL3();
         allocate_new_L3 = false;
     }
     
@@ -228,12 +231,12 @@ static bool allocateL2(seL4_Error* sel4_error) {
     index |= (calcL5Index() << PAGE_CNODE_BITS * 1);
     index |= (calcL4Index() << PAGE_CNODE_BITS * 0);
     
-    return retypeIntoCTable(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), index, PAGE_CNODE_BITS * 2, calcL3Index(), sel4_error);
+    retypeIntoCTable(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), index, PAGE_CNODE_BITS * 2, calcL3Index());
 }
 
-static bool allocateL1(seL4_Error* sel4_error) {
+static void allocateL1() {
     if (allocate_new_L2) {
-        if (!allocateL2(sel4_error)) return false;
+        allocateL2();
         allocate_new_L2 = false;
     }
     
@@ -242,14 +245,14 @@ static bool allocateL1(seL4_Error* sel4_error) {
     index |= (calcL4Index() << PAGE_CNODE_BITS * 1);
     index |= (calcL3Index() << PAGE_CNODE_BITS * 0);
     
-    return retypeIntoCTable(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), index, PAGE_CNODE_BITS * 3, calcL2Index(), sel4_error);
+    retypeIntoCTable(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), index, PAGE_CNODE_BITS * 3, calcL2Index());
 }
 
 
 
-static bool allocateFrame(seL4_Error* sel4_error) {
+static void allocateFrame() {
     if (allocate_new_L1) {
-        if (!allocateL1(sel4_error)) return false;
+        allocateL1();
         allocate_new_L1 = false;
     }
     
@@ -262,26 +265,26 @@ static bool allocateFrame(seL4_Error* sel4_error) {
     // See if this frame allocation used up all the cslots in the cnode, and more tables need to be allocated
     setTableAllocationFlags();
     
-    return retypeIntoFrames(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), index, PAGE_CNODE_BITS * 4, calcL1Index(), sel4_error, BIT(MEMORY_CHUNKING_BATCH_SIZE));
+    retypeIntoFrames(GLOBALS_BOOTSTRAP_CSLOT(l5_memory), index, PAGE_CNODE_BITS * 4, calcL1Index(), BIT(MEMORY_CHUNKING_BATCH_SIZE));
 }
 
-bool Setup::breakMemoryIntoChunks() {
+void Setup::breakMemoryIntoChunks() {
     // Start by skipping to first acceptable region
     current_region = findAcceptableRegion(Globals::boot_info->untyped.start);
     // Make sure at least one acceptable region was found
-    retErrorIfFail(current_region != 0, "No acceptable regions found for retyping!");
+    assert(current_region != 0);
     
     bytes_left_in_region = BIT(getRegionDesc(current_region)->sizeBits);
     
+    processed_chunks = 0;
     total_chunks = calcTotalChunks();
     
-    seL4_Error sel4_error;
-    
-    while (allocateFrame(&sel4_error)) {
-        retFalseIfFail(onNewUsableChunkSuccess());
+    done_processing = false;
+    while (!done_processing) {
+        allocateFrame();
+        onNewUsableChunkSuccess();
     }
     
-    if (sel4_error != seL4_NoError) return false;
     /*
     // Move L5 tree and set guard so that all the untyped caps are accessible
     sel4_error = seL4_CNode_Mutate(seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(l5_memory), PAGE_CNODE_BITS,
@@ -291,6 +294,4 @@ bool Setup::breakMemoryIntoChunks() {
     Globals::has_memory_tree_been_moved = true;*/
     
     printf("%lu chunks processed, %lu chunks available\n", processed_chunks, Globals::num_memory_chunks);
-    
-    return true;
 }

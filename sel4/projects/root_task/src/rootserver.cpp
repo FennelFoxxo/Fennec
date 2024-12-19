@@ -4,6 +4,7 @@
 #include "stack.hpp"
 #include "graphics.hpp"
 #include "mapping.hpp"
+#include "assert.h"
 
 extern "C" {
 #include <stdio.h>
@@ -11,36 +12,27 @@ extern "C" {
 #include <utils/util.h>
 }
 
-void halt(const char* halt_message = nullptr) {
-	if (halt_message != nullptr) printf("%s\n  - Error: %s\n", halt_message, GLOBALS_GET_ERROR());
+void halt(const char* err = nullptr) {
+	if (err) printf("%s\n", err);
 	seL4_TCB_Suspend(seL4_CapInitThreadTCB);
 }
 
 int main(void) {
+    setAssertFailCallback(&halt);
+    
 	printf("\n\n--- ROOTSERVER START ---\n\n");
     
-    if (Setup::initBootInfo()) printf("Global info setup successfully\n");
-	else halt("Failed to setup global info");
+    Setup::initBootInfo();
+    printf("Global info setup successfully\n");
     
-    if (Globals::framebuffer_info) {
-        printf("addr: %lx\n", Globals::framebuffer_info->addr);
-        printf("pitch: %u\n", Globals::framebuffer_info->pitch);
-        printf("width: %u\n", Globals::framebuffer_info->width);
-        printf("height: %u\n", Globals::framebuffer_info->height);
-        printf("bpp: %u\n", Globals::framebuffer_info->bpp);
-        printf("type: %u\n", Globals::framebuffer_info->type);
-    }
-    
-    if (Setup::breakMemoryIntoChunks()) printf("Chunked memory successfully\n");
-	else halt("Failed to create chunked memory");
+    Setup::breakMemoryIntoChunks();
+    printf("Chunked memory successfully\n");
     
     rect(0, 0, getWidth(), 25, {0, 255, 0});
     rect(0, 25, getWidth(), getHeight()-25, {50, 50, 50});
     
-    
-    
-    if (Setup::launchMemoryAllocatorThread()) printf("Launched memory allocator successfully\n");
-	else halt("Failed to launch memory allocator");
+    Setup::launchMemoryAllocatorThread();
+    printf("Launched memory allocator successfully\n");
     
     rect(0, 25, getWidth(), 25, {0, 128, 0});
     

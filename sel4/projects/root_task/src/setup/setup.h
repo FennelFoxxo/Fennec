@@ -4,12 +4,11 @@
 
 namespace Setup {
 
-bool initBootInfo();
-
-bool breakMemoryIntoChunks();
-bool setupMapping();
-bool setupGraphics();
-bool setupNewCSpace();
-bool launchMemoryAllocatorThread();
+void initBootInfo();
+void breakMemoryIntoChunks();
+void setupMapping();
+void setupGraphics();
+void setupNewCSpace();
+void launchMemoryAllocatorThread();
 
 }

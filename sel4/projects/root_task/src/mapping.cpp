@@ -20,7 +20,7 @@ bool MappingContext::mapPagingStructure(seL4_Word type, seL4_Word vaddr) {
     seL4_CPtr untyped_cptr, untyped_ret_cptr;
     
     // Get untyped
-    if (!get_untyped_func(&untyped_cptr, &untyped_ret_cptr)) return false;
+    get_untyped_func(&untyped_cptr, &untyped_ret_cptr);
 
     // Retype into object
     seL4_Error error = seL4_Untyped_Retype(untyped_cptr, type, 0,
@@ -29,12 +29,12 @@ bool MappingContext::mapPagingStructure(seL4_Word type, seL4_Word vaddr) {
     
     // Return untyped
     if (ret_untyped_func) {
-        if (!ret_untyped_func(untyped_ret_cptr)) return false;
+        ret_untyped_func(untyped_ret_cptr);
     }
     
     // Get free cslot
     seL4_CPtr cslot_cptr;
-    if (!get_cslot_func(&cslot_cptr)) return false;
+    get_cslot_func(&cslot_cptr);
 
     // Move retyped object from temp slot to free cslot
     error = seL4_CNode_Move(seL4_CapInitThreadCNode, cslot_cptr, seL4_WordBits,
