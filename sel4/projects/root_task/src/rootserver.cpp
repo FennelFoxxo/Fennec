@@ -1,7 +1,6 @@
 #include "globals/globals.h"
 #include "setup/setup.h"
 
-#include "stack.hpp"
 #include "graphics.hpp"
 #include "mapping.hpp"
 #include "assert.h"

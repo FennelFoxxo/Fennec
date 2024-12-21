@@ -5,7 +5,7 @@
 #include "mapping.hpp"
 #include <memory_allocator/memory_allocator.h>
 
-#include <stack.hpp>
+#include <runtime_env.hpp>
 
 extern "C" {
 #include <stdio.h>
@@ -184,42 +184,25 @@ static void loadElf() {
 
 static void setupStack() {
     mapCurrentFrameInThisVSpace(TEMP_FRAME_VADDR);
-    
-    // Create stack object at top of page
-    long long unsigned temp_stack_top_initial = TEMP_FRAME_VADDR + BIT(seL4_PageBits);
-    Stack stack(temp_stack_top_initial);
-    
-    const char* process_name = (const char*)stack.pushString("My process!");
-    
-    
-    // Align stack
-    while ((temp_stack_top_initial - stack.getStackTop()) % sizeof(seL4_Word)) {
-        stack.push<char>(0);
-    }
 
-    // Auxiliary vector - null terminator
-    stack.push(auxv_t{.a_type = AT_NULL});
+    RuntimeEnvironment re;
     
-    // Provide IPC buffer address
-    stack.push(auxv_t{.a_type = AT_SEL4_IPC_BUFFER_PTR, .a_un{.a_ptr = (void*)THREAD_IPC_BUFFER_VADDR} });
+    re.setStackTop(THREAD_STACK_TOP_VADDR);
+    re.setProcessName("My process!");
+    re.setIPCBufferAddress(THREAD_IPC_BUFFER_VADDR);
+    re.addArg(50);
     
+    int arr[10] = {10, 20, 30, 40, 50};
+    int arr2[10] = {1, 2, 3, 4, 5};
     
-    // Environment pointer vector - null terminator
-    stack.push(SEL4RUNTIME_NULL);
+    seL4_Word arr_addr2 = re.addCustomData(arr2, sizeof(arr2));
+    seL4_Word arr_addr = re.addCustomData(arr, sizeof(arr));
+    re.addArg(arr_addr);
+    re.addArg(arr_addr2);
     
-    // Empty
-    stack.push<seL4_Word>(0);
-
-    // Second argument
-    stack.push<seL4_Word>(22);
-
-    // Push process name as first argument
-    stack.push(process_name - temp_stack_top_initial + THREAD_STACK_TOP_VADDR);
+    // Write stack at top of page
+    stack_bytes_pushed = re.write(TEMP_FRAME_VADDR + BIT(seL4_PageBits));
     
-    // Argument count
-    stack.push<seL4_Word>(2);
-    
-    stack_bytes_pushed = temp_stack_top_initial - stack.getStackTop();
     
     unmapCurrentFrame();
     
