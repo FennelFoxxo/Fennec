@@ -37,8 +37,14 @@ int main(void) {
     
     seL4_Yield();
     
-	seL4_DebugDumpScheduler();
+    seL4_Word badge;
+    seL4_MessageInfo_t response = seL4_Recv(GLOBALS_ASSORTED_CSLOT(memory_allocator_endpoint), &badge);
     
+    for (seL4_Word i = 0; i < seL4_MessageInfo_get_length(response); i++) {
+        char c = (char)seL4_GetMR(i);
+        printf("%c", c);
+    }
+    printf("\n");
 
 	halt();
     return 0;

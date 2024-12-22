@@ -259,8 +259,23 @@ static void setupRegisters() {
 }
 
 static void setupCSlots() {
+    // Copy TCB cap into slot 0
     seL4_Error error = seL4_CNode_Copy(GLOBALS_ASSORTED_CSLOT(memory_allocator_croot), 0, PAGE_CNODE_BITS,
                                        seL4_CapInitThreadCNode, GLOBALS_ASSORTED_CSLOT(memory_allocator_tcb), seL4_WordBits, seL4_AllRights);
+    assert(error == seL4_NoError, error);
+    
+    // Create endpoint object
+    getUntyped();
+    error = seL4_Untyped_Retype(untyped_cptr, seL4_EndpointObject, PAGE_CNODE_BITS,
+                                seL4_CapInitThreadCNode, GLOBALS_CSLOT_INDEX(assorted_caps), PAGE_CNODE_BITS,
+                                GLOBALS_ASSORTED_CSLOT_INDEX(memory_allocator_endpoint), 1);
+	assert(error == seL4_NoError, error);
+    
+    returnUntyped();
+    
+    // Copy endpoint object into slot 1
+    error = seL4_CNode_Mint(GLOBALS_ASSORTED_CSLOT(memory_allocator_croot), 1, PAGE_CNODE_BITS,
+                            seL4_CapInitThreadCNode, GLOBALS_ASSORTED_CSLOT(memory_allocator_endpoint), seL4_WordBits, seL4_AllRights, 0x4269);
     assert(error == seL4_NoError, error);
 }
 

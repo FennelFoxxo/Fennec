@@ -82,6 +82,7 @@ enum class AssortedSlots {
     memory_allocator_croot,
     memory_allocator_vspace,
     memory_allocator_ipc_buffer,
+    memory_allocator_endpoint,
     
     // Room for paging structures to be created for mapping memory allocator in thread vspace
     memory_allocator_paging_objects_start,
