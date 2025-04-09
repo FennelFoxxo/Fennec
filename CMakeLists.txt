@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16.0)
-project(seL4-template)
+project(Fennec)
 
 list(
     APPEND
