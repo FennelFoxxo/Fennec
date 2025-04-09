@@ -9,7 +9,7 @@ set(esp_img "${CMAKE_CURRENT_BINARY_DIR}/esp.img")
 
 set(bootloader_bin_dest "${esp_root}/EFI/BOOT/BOOTX64.EFI")
 
-cmake_path(GET BOOTLOADER_CONFIG_PATH FILENAME bootloader_config_filename)
+get_filename_component(bootloader_config_filename "${BOOTLOADER_CONFIG_PATH}" NAME)
 set(bootloader_config_dest "${esp_root}/EFI/BOOT/${bootloader_config_filename}")
 
 set(root_task_dest "${esp_root}/${CMAKE_PROJECT_NAME}/root_task")
