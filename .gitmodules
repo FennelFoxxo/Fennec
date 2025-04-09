@@ -16,3 +16,6 @@
 [submodule "system/projects/util_libs"]
 	path = system/projects/util_libs
 	url = https://github.com/seL4/util_libs.git
+[submodule "system/projects/Tailspring"]
+	path = system/projects/Tailspring
+	url = https://github.com/FennelFoxxo/Tailspring.git
