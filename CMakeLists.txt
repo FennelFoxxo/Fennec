@@ -8,6 +8,8 @@ list(
         ${CMAKE_CURRENT_LIST_DIR}/system
 )
 
+set(RUNTIME_CONFIGS "${CMAKE_CURRENT_LIST_DIR}/runtime-configs")
+
 find_package(system REQUIRED)
 find_package(boot REQUIRED)
 

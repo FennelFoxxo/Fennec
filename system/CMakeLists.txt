@@ -10,9 +10,9 @@ include_sel4_configuration("common")
 include_sel4_configuration("x86_64")
 finalize_sel4_configuration()
 
+find_package(Tailspring REQUIRED)
 
-find_package(root_task REQUIRED)
+tailspring_compile()
+DeclareRootserver(tailspring)
 
-
-DeclareRootserver(root_task)
 finalize_sel4_build()
