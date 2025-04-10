@@ -9,6 +9,7 @@ include_sel4_configuration("x86_64")
 finalize_sel4_configuration()
 
 find_package(Tailspring REQUIRED)
+find_package(child_thread REQUIRED)
 
 DeclareRootserver(tailspring)
 
