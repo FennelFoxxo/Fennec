@@ -38,6 +38,10 @@ threads:
     thread1_tcb:
         cspace: thread1_cspace
         vspace: thread_vspace
+        ipc_buffer: thread1_ipc
+        stack_size: 4096
     thread2_tcb:
         cspace: thread2_cspace
         vspace: thread_vspace
+        ipc_buffer: thread2_ipc
+        stack_size: 4096
