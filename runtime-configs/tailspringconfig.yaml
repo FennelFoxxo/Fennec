@@ -1,9 +1,14 @@
 caps:
     thread1_tcb: tcb
-    thread1_frame: frame
+    thread1_ipc: frame
+
     thread2_tcb: tcb
+    thread2_ipc: frame
+
+    thread1_frame: frame
     thread2_frame: frame
     thread_endpoint: endpoint
+
 
 cap_modifications:
     thread1_endpoint:
@@ -30,5 +35,9 @@ vspaces:
     thread_vspace: thread_elf
 
 threads:
-    - {cspace: thread1_cspace, vspace: thread_vspace}
-    - {cspace: thread2_cspace, vspace: thread_vspace}
+    thread1_tcb:
+        cspace: thread1_cspace
+        vspace: thread_vspace
+    thread2_tcb:
+        cspace: thread2_cspace
+        vspace: thread_vspace
