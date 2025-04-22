@@ -32,16 +32,17 @@ cnodes:
         2: thread2_endpoint
 
 vspaces:
-    thread_vspace: thread_elf
+    thread1_vspace: thread_elf
+    thread2_vspace: thread_elf
 
 threads:
     thread1_tcb:
         cspace: thread1_cspace
-        vspace: thread_vspace
+        vspace: thread1_vspace
         ipc_buffer: thread1_ipc
         stack_size: 4096
     thread2_tcb:
         cspace: thread2_cspace
-        vspace: thread_vspace
+        vspace: thread2_vspace
         ipc_buffer: thread2_ipc
         stack_size: 4096

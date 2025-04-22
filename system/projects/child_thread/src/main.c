@@ -1,13 +1,11 @@
-int flag = 0;
+#include <stdio.h>
 
-void _start() {
-    // Segfault at dummy address to test that this program is being loaded correctly
+int main(int argc, char *argv[]) {
+    // Name is first argument
+    char* name = argv[0];
 
-    if (flag) {
-        *(int*)0x123456 = 0;
-    } else {
-        flag = 1;
-        *(int*)0x987654 = 0;
-    }
+    printf("Hello from %s!\n", name);
+
     while (1);
+    return 0;
 }
