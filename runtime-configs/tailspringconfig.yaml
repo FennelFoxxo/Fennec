@@ -13,16 +13,16 @@ caps:
 cap_modifications:
     thread1_endpoint:
         original: thread_endpoint
-        rights: [read]
-    thread2_endpoint:
-        original: thread_endpoint
         rights: [write]
         badge: 1234
+    thread2_endpoint:
+        original: thread_endpoint
+        rights: [read]
 
 cnodes:
     thread1_cspace:
         size: 5
-        guard: 10
+        guard: 59
         1: thread1_frame
         2: thread1_endpoint
     thread2_cspace:
