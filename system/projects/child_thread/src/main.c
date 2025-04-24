@@ -29,6 +29,11 @@ int main2(int argc, char *argv[]) {
     while (!initialized);
     
     printf("Started thread: %s\n", argv[0]);
+    printf("  Args: ");
+    for (int i = 1; i < argc; i++) {
+        printf("%s ", argv[i]);
+    }
+    printf("\n");
 
     // Normally sel4runtime would set up the tls, but since main2 is called directly,
     // we need to do it manually

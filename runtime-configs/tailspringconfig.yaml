@@ -4,7 +4,7 @@ caps:
 
     producer1_thread: tcb
     producer1_ipc: frame
-    
+
     producer2_thread: tcb
     producer2_ipc: frame
 
@@ -53,9 +53,11 @@ threads:
         ipc_buffer: producer1_ipc
         stack_size: 4096
         entry: main2
+        args: [foo, bar]
     producer2_thread:
         cspace: producer2_cspace
         vspace: shared_vspace
         ipc_buffer: producer2_ipc
         stack_size: 4096
         entry: main2
+        args: [foo2, bar2]
