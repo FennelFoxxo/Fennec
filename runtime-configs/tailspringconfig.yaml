@@ -1,48 +1,61 @@
 caps:
-    thread1_tcb: tcb
-    thread1_ipc: frame
+    consumer_thread: tcb
+    consumer_ipc: frame
 
-    thread2_tcb: tcb
-    thread2_ipc: frame
+    producer1_thread: tcb
+    producer1_ipc: frame
+    
+    producer2_thread: tcb
+    producer2_ipc: frame
 
-    thread1_frame: frame
-    thread2_frame: frame
-    thread_endpoint: endpoint
+    shared_endpoint: endpoint
 
 
 cap_modifications:
-    thread1_endpoint:
-        original: thread_endpoint
+    consumer_endpoint:
+        original: shared_endpoint
+        rights: [read]
+    producer1_endpoint:
+        original: shared_endpoint
         rights: [write]
         badge: 1234
-    thread2_endpoint:
-        original: thread_endpoint
-        rights: [read]
+    producer2_endpoint:
+        original: shared_endpoint
+        rights: [write]
+        badge: 5678
 
 cnodes:
-    thread1_cspace:
+    consumer_cspace:
         size: 5
         guard: 59
-        1: thread1_frame
-        2: thread1_endpoint
-    thread2_cspace:
+        1: consumer_endpoint
+    producer1_cspace:
         size: 5
         guard: 59
-        1: thread2_frame
-        2: thread2_endpoint
+        1: producer1_endpoint
+    producer2_cspace:
+        size: 5
+        guard: 59
+        1: producer2_endpoint
 
 vspaces:
-    thread_vspace: thread_elf
+    shared_vspace: thread_elf
 
 threads:
-    thread1_tcb:
-        cspace: thread1_cspace
-        vspace: thread_vspace
-        ipc_buffer: thread1_ipc
+    consumer_thread:
+        cspace: consumer_cspace
+        vspace: shared_vspace
+        ipc_buffer: consumer_ipc
         stack_size: 4096
-    thread2_tcb:
-        cspace: thread2_cspace
-        vspace: thread_vspace
-        ipc_buffer: thread2_ipc
+    producer1_thread:
+        cspace: producer1_cspace
+        vspace: shared_vspace
+        ipc_buffer: producer1_ipc
+        stack_size: 4096
+        entry: main2
+    producer2_thread:
+        cspace: producer2_cspace
+        vspace: shared_vspace
+        ipc_buffer: producer2_ipc
         stack_size: 4096
         entry: main2
