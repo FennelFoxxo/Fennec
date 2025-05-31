@@ -10,7 +10,6 @@ caps:
 
     shared_endpoint: endpoint
 
-
 cap_modifications:
     consumer_endpoint:
         original: shared_endpoint
