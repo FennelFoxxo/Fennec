@@ -3,6 +3,7 @@
 #include <sel4runtime.h>
 #include <string.h>
 #include <stdlib.h>
+#include <tailspring.h>
 
 int initialized = 0;
 
@@ -24,6 +25,7 @@ int main(int argc, char *argv[], char *envp[]) {
         printf("%s ", *s);
     }
     printf("\n");
+    printf("tailspring_lib_test_int: %d\n", tailspring_lib_test_int);
     initialized = 1;
 
     while (1) {
