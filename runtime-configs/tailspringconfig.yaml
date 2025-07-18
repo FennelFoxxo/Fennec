@@ -32,6 +32,7 @@ cnodes:
         size: 5
         guard: 59
         1: producer1_endpoint
+        gp_untypeds: 3
     producer2_cspace:
         size: 5
         guard: 59
@@ -45,18 +46,18 @@ threads:
         cspace: consumer_cspace
         vspace: shared_vspace
         ipc_buffer: consumer_ipc
-        stack_size: 4096
+        stack_size: 16384
     producer1_thread:
         cspace: producer1_cspace
         vspace: shared_vspace
         ipc_buffer: producer1_ipc
-        stack_size: 4096
+        stack_size: 16384
         entry: main2
         args: [foo, bar]
     producer2_thread:
         cspace: producer2_cspace
         vspace: shared_vspace
         ipc_buffer: producer2_ipc
-        stack_size: 4096
+        stack_size: 16384
         entry: main2
         args: [foo2, bar2]
