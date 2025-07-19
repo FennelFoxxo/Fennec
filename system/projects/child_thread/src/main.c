@@ -25,7 +25,7 @@ int main(int argc, char *argv[], char *envp[]) {
         printf("%s ", *s);
     }
     printf("\n");
-    printf("tailspring_lib_test_int: %d\n", tailspring_lib_test_int);
+
     initialized = 1;
 
     while (1) {
@@ -49,35 +49,22 @@ int main2(int argc, char *argv[], char *envp[]) {
 
     char tls[4096] MIN_ALIGNED = {};
     sel4runtime_move_initial_tls(tls);
+    
+    if (!tailspring_get_ipc_buffer_addr(envp, &__sel4_ipc_buffer)) {
+        printf("Failed to get ipc buffer address!\n");
+        while (1);
+    }
+    
+    GPMemoryInfo* gp_memory_info;
+    if (tailspring_get_gp_memory_info(envp, &gp_memory_info)) {
+        printf("Received gp memory info at addr %p\n", gp_memory_info);
 
-    // Environment pointers
-    for (char** env_ptr = envp; *env_ptr; env_ptr++) {
-        char* env_var = *env_ptr;
-        // Look for ipc buffer environment pointer
-        if (startswith(env_var, "ipc_buffer=")) {
-            // Convert to int
-            char* ipc_buffer_addr_str = strchr(env_var, '=') + 1;
-            long long unsigned ipc_buffer_addr = atoll(ipc_buffer_addr_str);
+        seL4_Word num_untypeds = gp_memory_info->num_untypeds;
+        printf("Num untypeds: %lu\n", num_untypeds);
+        for (int i = 0; i < num_untypeds; i++) {
+            seL4_Word size_bits = gp_memory_info->untyped_size_bits[i];
+            printf("Untyped %d size bits: %lu\n", i, size_bits);
 
-            // Set ipc buffer
-            __sel4_ipc_buffer = (void*)ipc_buffer_addr;
-
-        }
-
-        if (startswith(env_var, "gp_memory_info=")) {
-            // Convert to int
-            char* gp_memory_info_addr_str = strchr(env_var, '=') + 1;
-            long long unsigned gp_memory_info_addr = atoll(gp_memory_info_addr_str);
-
-            printf("Received gp memory info at addr %llx\n", gp_memory_info_addr);
-
-            seL4_Word num_untypeds = *(seL4_Word*)gp_memory_info_addr;
-            printf("Num untypeds: %lu\n", num_untypeds);
-            for (int i = 0; i < num_untypeds; i++) {
-                seL4_Word size_bits = ((seL4_Word*)gp_memory_info_addr)[i+1];
-                printf("Untyped %d size bits: %lu\n", i, size_bits);
-
-            }
         }
     }
 
