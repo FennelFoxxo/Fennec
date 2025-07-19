@@ -2,8 +2,7 @@
 # but will break normal compilation of projects (e.g. a C project that runs on the host machine to generate files).
 # By wrapping the core seL4 compilation in its own CMakeLists.txt, we can call add_subdirectory which will not bring
 # variables or compiler flags into the parent scope, but it will make targets visible. Projects linking with sel4muslcsys
-# will pick up on these flags, or alternatively projects can link with sel4muslcsys_flags to only pick up on the flags
-# without linking with the entirety of sel4muslcsys
+# will then pick up on these flags.
 
 cmake_minimum_required(VERSION 3.16.0)
 project(sel4_wrapper)
